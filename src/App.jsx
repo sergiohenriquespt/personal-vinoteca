@@ -264,7 +264,7 @@ function PhotoUpload({ value, onChange }) {
 }
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
-function WineForm({ wine, types, setTypes, onSave, onClose }) {
+function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, onSave, onClose }) {
   const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
@@ -272,7 +272,17 @@ function WineForm({ wine, types, setTypes, onSave, onClose }) {
   const [addingType, setAddingType] = useState(false)
 
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
-  const regions = COUNTRIES_REGIONS[f.country] || []
+  const regions = (countriesRegions || COUNTRIES_REGIONS)[f.country] || []
+  const allCountriesForm = Object.keys(countriesRegions || COUNTRIES_REGIONS)
+
+  const addCountryForm = (name) => {
+    setCountriesRegions?.((p) => ({ ...p, [name]: [] }))
+    set('country', name); set('region', '')
+  }
+  const addRegionForm = (region) => {
+    setCountriesRegions?.((p) => ({ ...p, [f.country]: [...(p[f.country] || []), region] }))
+    set('region', region)
+  }
 
   const fetchVivino = async () => {
     if (!f.name) return
@@ -337,17 +347,23 @@ function WineForm({ wine, types, setTypes, onSave, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
           <label style={S.lbl}>País</label>
-          <select style={{ ...S.inp, cursor: 'pointer' }} value={f.country} onChange={(e) => { set('country', e.target.value); set('region', '') }}>
-            {Object.keys(COUNTRIES_REGIONS).map((c) => <option key={c}>{c}</option>)}
-          </select>
+          <FilterSelect
+            placeholder="Seleccionar país"
+            value={f.country}
+            onChange={(v) => { set('country', v); set('region', '') }}
+            options={allCountriesForm}
+            onAdd={addCountryForm}
+          />
         </div>
         <div>
           <label style={S.lbl}>Região</label>
-          {regions.length > 0
-            ? <select style={{ ...S.inp, cursor: 'pointer' }} value={f.region} onChange={(e) => set('region', e.target.value)}>
-                <option value="">—</option>{regions.map((r) => <option key={r}>{r}</option>)}
-              </select>
-            : <input style={S.inp} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Região livre" />}
+          <FilterSelect
+            placeholder={regions.length ? 'Seleccionar região' : 'Livre'}
+            value={f.region}
+            onChange={(v) => set('region', v)}
+            options={regions}
+            onAdd={addRegionForm}
+          />
         </div>
       </div>
 
@@ -528,6 +544,89 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
   )
 }
 
+// ─── PIE CHART (SVG, sem dependências) ───────────────────────────────────────
+const PIE_PALETTE = ['#c8963e','#78b0d8','#68c880','#e87080','#c078cc','#e88050','#d4a838','#9a8f82','#e878a8','#68a8d8']
+
+function PieChart({ data, total }) {
+  if (!data.length || total === 0) return null
+  const cx = 90, cy = 90, R = 72, r = 46
+  let ang = -Math.PI / 2
+  const slices = data.map((d, i) => {
+    const sweep = (d.value / total) * 2 * Math.PI
+    const end = ang + sweep
+    const cos1 = Math.cos(ang), sin1 = Math.sin(ang)
+    const cos2 = Math.cos(end), sin2 = Math.sin(end)
+    const large = sweep > Math.PI ? 1 : 0
+    const path = [
+      `M ${cx + r * cos1} ${cy + r * sin1}`,
+      `L ${cx + R * cos1} ${cy + R * sin1}`,
+      `A ${R} ${R} 0 ${large} 1 ${cx + R * cos2} ${cy + R * sin2}`,
+      `L ${cx + r * cos2} ${cy + r * sin2}`,
+      `A ${r} ${r} 0 ${large} 0 ${cx + r * cos1} ${cy + r * sin1} Z`,
+    ].join(' ')
+    const mid = ang + sweep / 2
+    ang = end
+    return { ...d, path, color: PIE_PALETTE[i % PIE_PALETTE.length], pct: Math.round((d.value / total) * 100) }
+  })
+  return (
+    <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+      <svg viewBox="0 0 180 180" style={{ width: 150, flexShrink: 0 }}>
+        {slices.map((s, i) => (
+          <path key={i} d={s.path} fill={s.color} opacity={0.82}>
+            <title>{s.label}: {s.value} ({s.pct}%)</title>
+          </path>
+        ))}
+        <circle cx={cx} cy={cy} r={r - 2} fill="#1e1b16" />
+        <text x={cx} y={cy - 5} textAnchor="middle" fill="#e8dece" fontSize="20" fontWeight="300" fontFamily="Outfit,sans-serif">{total}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="#9a8f82" fontSize="8.5" fontFamily="Outfit,sans-serif" letterSpacing="0.1">REF.</text>
+      </svg>
+      <div style={{ flex: 1, minWidth: 100 }}>
+        {slices.map((s, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0, opacity: 0.82 }} />
+            <span style={{ fontSize: 12, color: '#e8dece', flex: 1 }}>{s.label}</span>
+            <span style={{ fontSize: 11, color: '#9a8f82' }}>{s.value}</span>
+            <span style={{ fontSize: 10, color: '#4a453f', minWidth: 28, textAlign: 'right' }}>{s.pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── FILTER SELECT WITH INLINE ADD ────────────────────────────────────────────
+function FilterSelect({ placeholder, value, onChange, options, onAdd }) {
+  const [adding, setAdding] = useState(false)
+  const [newVal, setNewVal] = useState('')
+  const confirmAdd = () => {
+    const v = newVal.trim()
+    if (v && !options.includes(v)) onAdd(v)
+    setNewVal(''); setAdding(false)
+  }
+  if (adding) return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <input
+        style={{ ...S.inp, width: 110, padding: '6px 8px', fontSize: 12 }}
+        value={newVal} onChange={(e) => setNewVal(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') setAdding(false) }}
+        placeholder="Novo…" autoFocus
+      />
+      <button onClick={confirmAdd} style={{ background: 'rgba(200,150,62,0.2)', border: 'none', borderRadius: 5, color: '#c8963e', cursor: 'pointer', padding: '5px 7px', display: 'flex' }}><Check size={12} /></button>
+      <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: '5px 4px', display: 'flex' }}><X size={12} /></button>
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+      <select style={{ ...S.inp, width: 'auto', fontSize: 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => <option key={o}>{o}</option>)}
+      </select>
+      <button onClick={() => setAdding(true)} title={`Adicionar a ${placeholder}`}
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: '#6a6058', cursor: 'pointer', padding: '4px 7px', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
+    </div>
+  )
+}
+
 // ─── WINE LIST VIEW ───────────────────────────────────────────────────────────
 function WineListRow({ wine, onClick }) {
   return (
@@ -657,12 +756,10 @@ function Dashboard({ wines, entries, consumptions }) {
         </div>
         <div style={{ ...S.stat, padding: 20 }}>
           <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país</h3>
-          {Object.entries(byCountry).sort((a, b) => b[1].count - a[1].count).map(([country, d]) => (
-            <div key={country} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
-              <span style={{ color: '#e8dece' }}>{country}</span>
-              <span style={{ color: '#9a8f82' }}>{d.count} ref · {d.bottles} gar.</span>
-            </div>
-          ))}
+          <PieChart
+            total={wines.length}
+            data={Object.entries(byCountry).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))}
+          />
         </div>
       </div>
 
@@ -689,18 +786,30 @@ function Dashboard({ wines, entries, consumptions }) {
 
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [wines,        setWines]        = useState(INIT_WINES)
-  const [entries,      setEntries]      = useState(INIT_ENTRIES)
-  const [consumptions, setConsumptions] = useState(INIT_CONSUMPTIONS)
-  const [types,        setTypes]        = useState(INIT_TYPES)
+  const [wines,            setWines]            = useState(INIT_WINES)
+  const [entries,          setEntries]          = useState(INIT_ENTRIES)
+  const [consumptions,     setConsumptions]     = useState(INIT_CONSUMPTIONS)
+  const [types,            setTypes]            = useState(INIT_TYPES)
+  const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
-  const [view,        setView]        = useState('dashboard')
-  const [search,      setSearch]      = useState('')
-  const [filterType,  setFilterType]  = useState('')
-  const [listMode,    setListMode]    = useState('list')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [modal,       setModal]       = useState(null)
-  const [activeWine,  setActiveWine]  = useState(null)
+  const [view,           setView]           = useState('dashboard')
+  const [search,         setSearch]         = useState('')
+  const [filterType,     setFilterType]     = useState('')
+  const [filterCountry,  setFilterCountry]  = useState('')
+  const [filterRegion,   setFilterRegion]   = useState('')
+  const [listMode,       setListMode]       = useState('list')
+  const [sidebarOpen,    setSidebarOpen]    = useState(true)
+  const [modal,          setModal]          = useState(null)
+  const [activeWine,     setActiveWine]     = useState(null)
+  const [searchEntradas, setSearchEntradas] = useState('')
+  const [searchConsumos, setSearchConsumos] = useState('')
+
+  // derived lists for filters
+  const allCountries = useMemo(() => Object.keys(countriesRegions), [countriesRegions])
+  const regionsForFilter = useMemo(() => filterCountry ? (countriesRegions[filterCountry] || []) : [], [countriesRegions, filterCountry])
+
+  const addCountry = (name) => setCountriesRegions((p) => ({ ...p, [name]: [] }))
+  const addRegionToCountry = (country, region) => setCountriesRegions((p) => ({ ...p, [country]: [...(p[country] || []), region] }))
 
   useEffect(() => {
     const h = () => setSidebarOpen(window.innerWidth >= 768)
@@ -728,8 +837,9 @@ export default function App() {
 
   const filtered = useMemo(() => wines.filter((w) => {
     const q = search.toLowerCase()
-    return (!q || [w.name, w.country, w.region].some((f) => f?.toLowerCase().includes(q))) && (!filterType || w.type === filterType)
-  }), [wines, search, filterType])
+    const ms = !q || [w.name, w.country, w.region].some((f) => f?.toLowerCase().includes(q))
+    return ms && (!filterType || w.type === filterType) && (!filterCountry || w.country === filterCountry) && (!filterRegion || w.region === filterRegion)
+  }), [wines, search, filterType, filterCountry, filterRegion])
 
   const liveWine = activeWine ? wines.find((w) => w.id === activeWine.id) || activeWine : null
 
@@ -788,14 +898,33 @@ export default function App() {
           </h1>
           {view === 'adega' && (
             <>
-              <div style={{ position: 'relative', flex: 1, maxWidth: 240 }}>
+              <div style={{ position: 'relative', flex: 1, maxWidth: 220 }}>
                 <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a453f' }} />
                 <input style={{ ...S.inp, paddingLeft: 30, fontSize: 13 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar…" />
               </div>
-              <select style={{ ...S.inp, width: 'auto', fontSize: 12, cursor: 'pointer' }} value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                <option value="">Todos os tipos</option>
-                {types.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              <FilterSelect
+                placeholder="Todos os tipos"
+                value={filterType}
+                onChange={setFilterType}
+                options={types}
+                onAdd={(v) => setTypes((p) => [...p, v])}
+              />
+              <FilterSelect
+                placeholder="Todos os países"
+                value={filterCountry}
+                onChange={(v) => { setFilterCountry(v); setFilterRegion('') }}
+                options={allCountries}
+                onAdd={addCountry}
+              />
+              {(filterCountry || regionsForFilter.length > 0) && (
+                <FilterSelect
+                  placeholder="Todas as regiões"
+                  value={filterRegion}
+                  onChange={setFilterRegion}
+                  options={filterCountry ? (countriesRegions[filterCountry] || []) : []}
+                  onAdd={(v) => filterCountry && addRegionToCountry(filterCountry, v)}
+                />
+              )}
               <div style={{ display: 'flex', background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                 {[{ m: 'list', I: List }, { m: 'grid', I: LayoutGrid }].map(({ m, I }) => (
                   <button key={m} onClick={() => setListMode(m)}
@@ -822,43 +951,69 @@ export default function App() {
 
           {view === 'entradas' && (
             <div style={{ maxWidth: 800, margin: '0 auto' }}>
-              {[...entries].sort((a, b) => b.date.localeCompare(a.date)).map((e) => {
-                const w = wines.find((x) => x.id === e.wineId)
-                return (
-                  <div key={e.id} style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-                    <div style={{ width: 32, height: 32, background: 'rgba(104,200,128,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LogIn size={13} color="#68c880" /></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w?.name || '(removido)'}</div>
-                      <div style={{ fontSize: 11, color: '#9a8f82' }}>{e.supplier} · {e.date}</div>
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4a453f' }} />
+                <input style={{ ...S.inp, paddingLeft: 34 }} value={searchEntradas} onChange={(e) => setSearchEntradas(e.target.value)} placeholder="Pesquisar por vinho ou fornecedor…" />
+              </div>
+              {(() => {
+                const q = searchEntradas.toLowerCase()
+                const filtered = [...entries]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .filter((e) => {
+                    const w = wines.find((x) => x.id === e.wineId)
+                    return !q || w?.name.toLowerCase().includes(q) || e.supplier.toLowerCase().includes(q) || e.date.includes(q)
+                  })
+                if (filtered.length === 0) return <p style={{ textAlign: 'center', color: '#4a453f', paddingTop: 40, fontSize: 13 }}>{searchEntradas ? 'Nenhum resultado.' : 'Sem entradas registadas.'}</p>
+                return filtered.map((e) => {
+                  const w = wines.find((x) => x.id === e.wineId)
+                  return (
+                    <div key={e.id} style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+                      <div style={{ width: 32, height: 32, background: 'rgba(104,200,128,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LogIn size={13} color="#68c880" /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w?.name || '(removido)'}</div>
+                        <div style={{ fontSize: 11, color: '#9a8f82' }}>{e.supplier} · {e.date}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#68c880' }}>+{e.quantity} gar.</div>
+                        <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price)}/un</div>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: '#68c880' }}>+{e.quantity} gar.</div>
-                      <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price)}/un</div>
-                    </div>
-                  </div>
-                )
-              })}
-              {entries.length === 0 && <p style={{ textAlign: 'center', color: '#4a453f', paddingTop: 40, fontSize: 13 }}>Sem entradas registadas.</p>}
+                  )
+                })
+              })()}
             </div>
           )}
 
           {view === 'consumos' && (
             <div style={{ maxWidth: 800, margin: '0 auto' }}>
-              {[...consumptions].sort((a, b) => b.date.localeCompare(a.date)).map((c) => {
-                const w = wines.find((x) => x.id === c.wineId)
-                return (
-                  <div key={c.id} style={{ ...S.card, display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 8 }}>
-                    <div style={{ width: 32, height: 32, background: 'rgba(200,150,62,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LogOut size={13} color="#c8963e" /></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w?.name || '(removido)'}</div>
-                      <div style={{ fontSize: 11, color: '#9a8f82', marginBottom: c.notes ? 4 : 0 }}>{c.date} · {c.quantity} {c.quantity === 1 ? 'garrafa' : 'garrafas'}</div>
-                      {c.notes && <div style={{ fontSize: 12, color: '#7a6f62', fontStyle: 'italic' }}>{c.notes}</div>}
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4a453f' }} />
+                <input style={{ ...S.inp, paddingLeft: 34 }} value={searchConsumos} onChange={(e) => setSearchConsumos(e.target.value)} placeholder="Pesquisar por vinho ou observações…" />
+              </div>
+              {(() => {
+                const q = searchConsumos.toLowerCase()
+                const filtered = [...consumptions]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .filter((c) => {
+                    const w = wines.find((x) => x.id === c.wineId)
+                    return !q || w?.name.toLowerCase().includes(q) || c.notes?.toLowerCase().includes(q) || c.date.includes(q)
+                  })
+                if (filtered.length === 0) return <p style={{ textAlign: 'center', color: '#4a453f', paddingTop: 40, fontSize: 13 }}>{searchConsumos ? 'Nenhum resultado.' : 'Sem consumos registados.'}</p>
+                return filtered.map((c) => {
+                  const w = wines.find((x) => x.id === c.wineId)
+                  return (
+                    <div key={c.id} style={{ ...S.card, display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 8 }}>
+                      <div style={{ width: 32, height: 32, background: 'rgba(200,150,62,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LogOut size={13} color="#c8963e" /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w?.name || '(removido)'}</div>
+                        <div style={{ fontSize: 11, color: '#9a8f82', marginBottom: c.notes ? 4 : 0 }}>{c.date} · {c.quantity} {c.quantity === 1 ? 'garrafa' : 'garrafas'}</div>
+                        {c.notes && <div style={{ fontSize: 12, color: '#7a6f62', fontStyle: 'italic' }}>{c.notes}</div>}
+                      </div>
+                      <div style={{ flexShrink: 0 }}><Stars value={c.rating} size={12} /></div>
                     </div>
-                    <div style={{ flexShrink: 0 }}><Stars value={c.rating} size={12} /></div>
-                  </div>
-                )
-              })}
-              {consumptions.length === 0 && <p style={{ textAlign: 'center', color: '#4a453f', paddingTop: 40, fontSize: 13 }}>Sem consumos registados.</p>}
+                  )
+                })
+              })()}
             </div>
           )}
         </div>
@@ -867,8 +1022,8 @@ export default function App() {
       {/* MODALS */}
       {modal && (
         <ModalShell onClose={closeModal}>
-          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} onSave={addWine} onClose={closeModal} />}
-          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} onSave={editWine} onClose={closeModal} />}
+          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={addWine} onClose={closeModal} />}
+          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} />}
           {modal === 'entry'       && liveWine && <EntryForm       wine={liveWine} onSave={addEntry}       onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}

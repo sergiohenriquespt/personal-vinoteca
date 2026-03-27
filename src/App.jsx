@@ -551,6 +551,30 @@ function PieChart({ data, total }) {
   if (!data.length || total === 0) return null
   const cx = 90, cy = 90, R = 72, r = 46
   let ang = -Math.PI / 2
+
+  // single-slice: arc path breaks at 360°, use circles instead
+  if (data.length === 1) {
+    const color = PIE_PALETTE[0]
+    return (
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <svg viewBox="0 0 180 180" style={{ width: 150, flexShrink: 0 }}>
+          <circle cx={cx} cy={cy} r={R} fill={color} opacity={0.82} />
+          <circle cx={cx} cy={cy} r={r - 2} fill="#1e1b16" />
+          <text x={cx} y={cy - 5} textAnchor="middle" fill="#e8dece" fontSize="20" fontWeight="300" fontFamily="Outfit,sans-serif">{total}</text>
+          <text x={cx} y={cy + 12} textAnchor="middle" fill="#9a8f82" fontSize="8.5" fontFamily="Outfit,sans-serif" letterSpacing="0.1">REF.</text>
+        </svg>
+        <div style={{ flex: 1, minWidth: 100 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0, opacity: 0.82 }} />
+            <span style={{ fontSize: 12, color: '#e8dece', flex: 1 }}>{data[0].label}</span>
+            <span style={{ fontSize: 11, color: '#9a8f82' }}>{data[0].value}</span>
+            <span style={{ fontSize: 10, color: '#4a453f', minWidth: 28, textAlign: 'right' }}>100%</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const slices = data.map((d, i) => {
     const sweep = (d.value / total) * 2 * Math.PI
     const end = ang + sweep
@@ -564,7 +588,6 @@ function PieChart({ data, total }) {
       `L ${cx + r * cos2} ${cy + r * sin2}`,
       `A ${r} ${r} 0 ${large} 0 ${cx + r * cos1} ${cy + r * sin1} Z`,
     ].join(' ')
-    const mid = ang + sweep / 2
     ang = end
     return { ...d, path, color: PIE_PALETTE[i % PIE_PALETTE.length], pct: Math.round((d.value / total) * 100) }
   })

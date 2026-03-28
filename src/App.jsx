@@ -545,9 +545,10 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, onSave, onClose }) {
-  const [f, setF] = useState({ date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
+function EntryForm({ wine, suppliers, setSuppliers, onSave, onClose }) {
+  const [f, setF] = useState({ date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const list = suppliers ?? SUPPLIERS
   return (
     <>
       <ModalHeader title="Registar Entrada" subtitle={`${wine.name} · ${wine.year}`} onClose={onClose} />
@@ -555,10 +556,15 @@ function EntryForm({ wine, onSave, onClose }) {
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
         <div><label style={S.lbl}>Quantidade</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
-      <div style={S.field}><label style={S.lbl}>Fornecedor</label>
-        <select style={{ ...S.inp, cursor: 'pointer' }} value={f.supplier} onChange={(e) => set('supplier', e.target.value)}>
-          {SUPPLIERS.map((s) => <option key={s}>{s}</option>)}
-        </select>
+      <div style={S.field}>
+        <label style={S.lbl}>Fornecedor</label>
+        <FilterSelect
+          placeholder="Seleccionar fornecedor"
+          value={f.supplier}
+          onChange={(v) => set('supplier', v)}
+          options={list}
+          onAdd={(v) => { setSuppliers?.((p) => [...p, v]); set('supplier', v) }}
+        />
       </div>
       <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0,00" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -591,7 +597,7 @@ function ConsumptionForm({ wine, onSave, onClose }) {
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption }) {
   const [tab, setTab] = useState('info')
   const wEntries  = entries.filter((e) => e.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const wConsumed = consumptions.filter((c) => c.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -660,7 +666,20 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
               <div key={e.id} style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div><div style={{ fontSize: 13, color: '#e8dece', fontWeight: 500 }}>{e.quantity} {e.quantity === 1 ? 'garrafa' : 'garrafas'} · {e.supplier}</div>
                   <div style={{ fontSize: 11, color: '#9a8f82', marginTop: 2 }}>{e.date}</div></div>
-                <div style={{ textAlign: 'right' }}><div style={{ fontSize: 13, color: '#c8963e' }}>{fmt(e.price)}/un</div><div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price * e.quantity)} total</div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, color: '#c8963e' }}>{fmt(e.price)}/un</div>
+                    <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price * e.quantity)} total</div>
+                  </div>
+                  {onDeleteEntry && (
+                    <button onClick={() => { if (window.confirm(`Cancelar esta entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será revertido.`)) onDeleteEntry(e) }}
+                      style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                      onMouseEnter={(ev) => { ev.currentTarget.style.color = '#e87080'; ev.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#3a3530'; ev.currentTarget.style.background = 'none' }}>
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
         </div>
@@ -672,7 +691,18 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
               <div key={c.id} style={S.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 13, color: '#e8dece', fontWeight: 500 }}>{c.quantity} {c.quantity === 1 ? 'garrafa' : 'garrafas'}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Stars value={c.rating} size={12} /><span style={{ fontSize: 11, color: '#9a8f82' }}>{c.date}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Stars value={c.rating} size={12} />
+                    <span style={{ fontSize: 11, color: '#9a8f82' }}>{c.date}</span>
+                    {onDeleteConsumption && (
+                      <button onClick={() => { if (window.confirm(`Cancelar este consumo de ${c.quantity} ${c.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será reposto.`)) onDeleteConsumption(c) }}
+                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {c.notes && <div style={{ fontSize: 12, color: '#9a8f82', marginTop: 4 }}>{c.notes}</div>}
               </div>
@@ -952,6 +982,7 @@ export default function App() {
   const [entries,          setEntries]          = useState(INIT_ENTRIES)
   const [consumptions,     setConsumptions]     = useState(INIT_CONSUMPTIONS)
   const [types,            setTypes]            = useState(INIT_TYPES)
+  const [suppliers,        setSuppliers]        = useState(SUPPLIERS)
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
   const [view,           setView]           = useState('dashboard')
@@ -1003,6 +1034,16 @@ export default function App() {
     setConsumptions((p) => [...p, { ...d, id: nextId(p), wineId: activeWine.id }])
     setWines((p) => p.map((w) => w.id !== activeWine.id ? w : { ...w, quantity: w.quantity - d.quantity, ...(d.rating ? { personalRating: d.rating } : {}) }))
     closeModal()
+  }
+
+  const deleteEntry = (entry) => {
+    setEntries((p) => p.filter((e) => e.id !== entry.id))
+    setWines((p) => p.map((w) => w.id !== entry.wineId ? w : { ...w, quantity: Math.max(0, w.quantity - entry.quantity) }))
+  }
+
+  const deleteConsumption = (consumption) => {
+    setConsumptions((p) => p.filter((c) => c.id !== consumption.id))
+    setWines((p) => p.map((w) => w.id !== consumption.wineId ? w : { ...w, quantity: w.quantity + consumption.quantity }))
   }
 
   const filtered = useMemo(() => wines.filter((w) => {
@@ -1144,6 +1185,13 @@ export default function App() {
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#68c880' }}>+{e.quantity} gar.</div>
                         <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price)}/un</div>
                       </div>
+                      <button onClick={() => { if (window.confirm(`Cancelar entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'} de "${w?.name}"? O stock será revertido.`)) deleteEntry(e) }}
+                        title="Cancelar entrada"
+                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                        onMouseEnter={(e2) => { e2.currentTarget.style.color = '#e87080'; e2.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                        onMouseLeave={(e2) => { e2.currentTarget.style.color = '#3a3530'; e2.currentTarget.style.background = 'none' }}>
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   )
                 })
@@ -1176,7 +1224,16 @@ export default function App() {
                         <div style={{ fontSize: 11, color: '#9a8f82', marginBottom: c.notes ? 4 : 0 }}>{c.date} · {c.quantity} {c.quantity === 1 ? 'garrafa' : 'garrafas'}</div>
                         {c.notes && <div style={{ fontSize: 12, color: '#7a6f62', fontStyle: 'italic' }}>{c.notes}</div>}
                       </div>
-                      <div style={{ flexShrink: 0 }}><Stars value={c.rating} size={12} /></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <Stars value={c.rating} size={12} />
+                        <button onClick={() => { if (window.confirm(`Cancelar consumo de ${c.quantity} ${c.quantity === 1 ? 'garrafa' : 'garrafas'} de "${w?.name}"? O stock será reposto.`)) deleteConsumption(c) }}
+                          title="Cancelar consumo"
+                          style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   )
                 })
@@ -1191,8 +1248,8 @@ export default function App() {
         <ModalShell onClose={closeModal}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} />}
-          {modal === 'entry'       && liveWine && <EntryForm       wine={liveWine} onSave={addEntry}       onClose={closeModal} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} onSave={addEntry} onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
         </ModalShell>
       )}

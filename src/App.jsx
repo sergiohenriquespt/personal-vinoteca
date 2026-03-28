@@ -2,11 +2,15 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Wine, Plus, Search, BarChart3, LogIn, LogOut,
   Edit2, Trash2, X, Menu, Sparkles, Check,
-  LayoutGrid, List, Camera, ImageOff, Eye, EyeOff,
+  LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
 const FONT = "'Outfit', system-ui, sans-serif"
+
+// ─── ANTHROPIC API KEY ────────────────────────────────────────────────────────
+// Substitui pela tua chave em https://console.anthropic.com/
+const ANTHROPIC_API_KEY = ''
 
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -338,6 +342,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
   const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
+  const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
   const [newType,    setNewType]    = useState('')
   const [addingType, setAddingType] = useState(false)
 
@@ -356,16 +361,37 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
   const fetchVivino = async () => {
     if (!f.name) return
-    setLoadingV(true)
+    if (!ANTHROPIC_API_KEY) { setVivinoStatus('nokey'); return }
+    setLoadingV(true); setVivinoStatus('idle')
     try {
-      const res  = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 100,
-          messages: [{ role: 'user', content: `Vivino community rating (1.0–5.0) for "${f.name}"${f.year ? ` ${f.year}` : ''}. JSON only: {"rating":X.X}` }] }) })
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001', max_tokens: 60,
+          messages: [{ role: 'user', content: `Vivino community rating (scale 1.0–5.0) for the wine "${f.name}"${f.year ? ` ${f.year}` : ''}. Reply ONLY with valid JSON, no markdown: {"rating":X.X}` }],
+        }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      const parsed = JSON.parse((data.content?.[0]?.text || '').replace(/```json|```/g, '').trim())
-      if (parsed.rating) set('vivinoRating', parsed.rating.toFixed(1))
-    } catch (_) {}
+      const txt  = (data.content?.[0]?.text || '').replace(/```json|```/g, '').trim()
+      const parsed = JSON.parse(txt)
+      if (parsed.rating && parsed.rating >= 1 && parsed.rating <= 5) {
+        set('vivinoRating', parsed.rating.toFixed(1))
+        setVivinoStatus('ok')
+      } else {
+        setVivinoStatus('error')
+      }
+    } catch (_) {
+      setVivinoStatus('error')
+    }
     setLoadingV(false)
+    setTimeout(() => setVivinoStatus('idle'), 3000)
   }
 
   const handleSave = () => {
@@ -465,10 +491,43 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
           <div style={{ display: 'flex', gap: 6 }}>
             <input style={{ ...S.inp, flex: 1 }} value={f.vivinoRating} onChange={(e) => set('vivinoRating', e.target.value)} placeholder="0.0" />
             <button onClick={fetchVivino} disabled={loadingV || !f.name}
-              style={{ background: 'rgba(200,150,62,0.15)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 6, color: '#c8963e', cursor: 'pointer', padding: '0 10px', opacity: loadingV || !f.name ? 0.4 : 1, display: 'flex', alignItems: 'center' }} title="Estimar via IA">
-              {loadingV ? '…' : <Sparkles size={14} />}
+              style={{
+                background: vivinoStatus === 'ok' ? 'rgba(104,200,128,0.15)' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? 'rgba(232,112,128,0.15)' : 'rgba(200,150,62,0.15)',
+                border: `1px solid ${vivinoStatus === 'ok' ? 'rgba(104,200,128,0.35)' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? 'rgba(232,112,128,0.35)' : 'rgba(200,150,62,0.3)'}`,
+                borderRadius: 6,
+                color: vivinoStatus === 'ok' ? '#68c880' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? '#e87080' : '#c8963e',
+                cursor: loadingV || !f.name ? 'not-allowed' : 'pointer',
+                padding: '0 10px', opacity: !f.name ? 0.4 : 1,
+                display: 'flex', alignItems: 'center', transition: 'all 0.2s', minWidth: 36, justifyContent: 'center',
+              }}
+              title={!ANTHROPIC_API_KEY ? 'Define ANTHROPIC_API_KEY no topo do App.jsx' : 'Estimar rating via IA'}>
+              {loadingV ? <span style={{ fontSize: 13 }}>…</span> : vivinoStatus === 'ok' ? <Check size={14} /> : vivinoStatus === 'error' ? <X size={14} /> : <Sparkles size={14} />}
             </button>
+            {f.name && (
+              <a
+                href={`https://www.vivino.com/search/wines?q=${encodeURIComponent([f.name, f.year].filter(Boolean).join(' '))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Pesquisar "${f.name}${f.year ? ` ${f.year}` : ''}" no Vivino`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#6a6058', textDecoration: 'none', transition: 'all 0.15s', minWidth: 36 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e8dece' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#6a6058' }}
+              >
+                <ExternalLink size={13} />
+              </a>
+            )}
           </div>
+          {vivinoStatus === 'nokey' && (
+            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#e87080', lineHeight: 1.4 }}>
+              Define <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 4px', borderRadius: 3 }}>ANTHROPIC_API_KEY</code> no topo do <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 4px', borderRadius: 3 }}>App.jsx</code>
+            </p>
+          )}
+          {vivinoStatus === 'error' && (
+            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#e87080' }}>Não foi possível estimar. Tenta de novo ou introduz manualmente.</p>
+          )}
+          {vivinoStatus === 'ok' && (
+            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#68c880' }}>Rating estimado com sucesso.</p>
+          )}
         </div>
       </div>
 

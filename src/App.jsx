@@ -317,7 +317,7 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
                   </div>
                 </div>
                 <button
-                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(false); onPartialMatch(w.name) }}
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(false); onPartialMatch(w) }}
                   title="Criar novo vintage com este nome"
                   style={{ padding: '4px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)',
                     background: 'rgba(255,255,255,0.05)', color: '#6a6058', fontSize: 10,
@@ -397,7 +397,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
               allWines={allWines}
               currentYear={f.year}
               onExactMatch={onExactMatch}
-              onPartialMatch={(name) => { set('name', name); set('year', '') }}
+              onPartialMatch={(w) => setF((p) => ({ ...p, name: w.name, type: w.type, country: w.country, region: w.region, year: '', purchasePrice: '', personalRating: 0, vivinoRating: '', notes: '' }))}
             />
           : <input style={S.inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex: Quinta da Gaivosa" />
         }

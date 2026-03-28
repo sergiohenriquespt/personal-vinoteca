@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Wine, Plus, Search, BarChart3, LogIn, LogOut,
   Edit2, Trash2, X, Menu, Sparkles, Check,
-  LayoutGrid, List, Camera, ImageOff,
+  LayoutGrid, List, Camera, ImageOff, Eye, EyeOff,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -263,8 +263,84 @@ function PhotoUpload({ value, onChange }) {
   )
 }
 
+// ─── WINE NAME AUTOCOMPLETE ───────────────────────────────────────────────────
+function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onPartialMatch, currentYear }) {
+  const [open, setOpen] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const ref = useRef()
+
+  const q = value.trim().toLowerCase()
+  const suggestions = q.length >= 2
+    ? allWines.filter((w) => w.name.toLowerCase().includes(q)).slice(0, 8)
+    : []
+
+  // close on outside click
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const handleSelect = (w, currentYear) => {
+    const sameYear = String(w.year) === String(currentYear)
+    setOpen(false)
+    if (sameYear) {
+      onExactMatch(w)
+    } else {
+      onPartialMatch(w.name)
+    }
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <input
+        style={S.inp}
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
+        onFocus={() => { setFocused(true); if (suggestions.length) setOpen(true) }}
+        onBlur={() => setFocused(false)}
+        placeholder="Ex: Quinta da Gaivosa"
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, marginTop: 4,
+          background: '#1e1b16', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+          <div style={{ padding: '6px 12px 4px', fontSize: 10, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Vinhos existentes
+          </div>
+          {suggestions.map((w) => {
+            const sameYear = String(w.year) === String(currentYear)
+            return (
+              <div key={w.id}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(w, currentYear) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  cursor: 'pointer', transition: 'background 0.1s', borderTop: '1px solid rgba(255,255,255,0.04)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <WineThumb photo={w.photo} type={w.type} size={18} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
+                  <div style={{ fontSize: 11, color: '#9a8f82' }}>{w.year} · {w.region}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <Badge type={w.type} />
+                  <div style={{ fontSize: 10, marginTop: 3, color: sameYear ? '#c8963e' : '#68c880' }}>
+                    {sameYear ? '→ dar entrada' : '→ novo vintage'}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
-function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, onSave, onClose }) {
+function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose }) {
   const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
@@ -320,7 +396,17 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
       <div style={S.field}>
         <label style={S.lbl}>Nome *</label>
-        <input style={S.inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex: Quinta do Crasto Reserva" />
+        {!wine && allWines
+          ? <WineNameAutocomplete
+              value={f.name}
+              onChange={(v) => set('name', v)}
+              allWines={allWines}
+              currentYear={f.year}
+              onExactMatch={onExactMatch}
+              onPartialMatch={(name) => { set('name', name); set('year', '') }}
+            />
+          : <input style={S.inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex: Quinta da Gaivosa" />
+        }
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
@@ -654,7 +740,7 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd }) {
 function WineListRow({ wine, onClick }) {
   return (
     <div onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s', opacity: wine.quantity === 0 ? 0.45 : 1 }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
       <WineThumb photo={wine.photo} type={wine.type} size={26} />
@@ -701,7 +787,7 @@ function WineGridView({ wines, onWineClick }) {
         const c = getTC(w.type)
         return (
           <div key={w.id} onClick={() => onWineClick(w)}
-            style={{ background: '#1e1b16', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s' }}
+            style={{ background: '#1e1b16', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', opacity: w.quantity === 0 ? 0.45 : 1 }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(200,150,62,0.25)' }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
             {w.photo ? <img src={w.photo} alt={w.name} style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
@@ -826,6 +912,14 @@ export default function App() {
   const [activeWine,     setActiveWine]     = useState(null)
   const [searchEntradas, setSearchEntradas] = useState('')
   const [searchConsumos, setSearchConsumos] = useState('')
+  const [showNoStock,    setShowNoStock]    = useState(() => {
+    try { return localStorage.getItem('videiras_showNoStock') !== 'false' } catch { return true }
+  })
+
+  // persist showNoStock
+  useEffect(() => {
+    try { localStorage.setItem('videiras_showNoStock', String(showNoStock)) } catch {}
+  }, [showNoStock])
 
   // derived lists for filters
   const allCountries = useMemo(() => Object.keys(countriesRegions), [countriesRegions])
@@ -861,8 +955,9 @@ export default function App() {
   const filtered = useMemo(() => wines.filter((w) => {
     const q = search.toLowerCase()
     const ms = !q || [w.name, w.country, w.region].some((f) => f?.toLowerCase().includes(q))
-    return ms && (!filterType || w.type === filterType) && (!filterCountry || w.country === filterCountry) && (!filterRegion || w.region === filterRegion)
-  }), [wines, search, filterType, filterCountry, filterRegion])
+    const stock = showNoStock || w.quantity > 0
+    return ms && stock && (!filterType || w.type === filterType) && (!filterCountry || w.country === filterCountry) && (!filterRegion || w.region === filterRegion)
+  }), [wines, search, filterType, filterCountry, filterRegion, showNoStock])
 
   const liveWine = activeWine ? wines.find((w) => w.id === activeWine.id) || activeWine : null
 
@@ -911,8 +1006,8 @@ export default function App() {
 
       {/* MAIN */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* header */}
-        <div style={{ padding: '13px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161310', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 }}>
+        {/* header — altura fixa igual em todas as vistas */}
+        <div style={{ padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161310', display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
           <button onClick={() => setSidebarOpen((p) => !p)} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: 4, display: 'flex' }}>
             <Menu size={17} />
           </button>
@@ -920,46 +1015,7 @@ export default function App() {
             {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos' }[view]}
           </h1>
           {view === 'adega' && (
-            <>
-              <div style={{ position: 'relative', flex: 1, maxWidth: 220 }}>
-                <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a453f' }} />
-                <input style={{ ...S.inp, paddingLeft: 30, fontSize: 13 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar…" />
-              </div>
-              <FilterSelect
-                placeholder="Todos os tipos"
-                value={filterType}
-                onChange={setFilterType}
-                options={types}
-                onAdd={(v) => setTypes((p) => [...p, v])}
-              />
-              <FilterSelect
-                placeholder="Todos os países"
-                value={filterCountry}
-                onChange={(v) => { setFilterCountry(v); setFilterRegion('') }}
-                options={allCountries}
-                onAdd={addCountry}
-              />
-              {(filterCountry || regionsForFilter.length > 0) && (
-                <FilterSelect
-                  placeholder="Todas as regiões"
-                  value={filterRegion}
-                  onChange={setFilterRegion}
-                  options={filterCountry ? (countriesRegions[filterCountry] || []) : []}
-                  onAdd={(v) => filterCountry && addRegionToCountry(filterCountry, v)}
-                />
-              )}
-              <div style={{ display: 'flex', background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-                {[{ m: 'list', I: List }, { m: 'grid', I: LayoutGrid }].map(({ m, I }) => (
-                  <button key={m} onClick={() => setListMode(m)}
-                    style={{ padding: '6px 9px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                      background: listMode === m ? 'rgba(200,150,62,0.12)' : 'transparent',
-                      color: listMode === m ? '#c8963e' : '#3a3530', transition: 'all 0.15s' }}>
-                    <I size={13} />
-                  </button>
-                ))}
-              </div>
-              <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />Vinho</Btn>
-            </>
+            <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />Vinho</Btn>
           )}
         </div>
 
@@ -967,9 +1023,44 @@ export default function App() {
         <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} />}
 
-          {view === 'adega' && (listMode === 'list'
-            ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />
-            : <WineGridView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />
+          {view === 'adega' && (
+            <>
+              {/* filtros — toolbar dentro do conteúdo */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: 160, maxWidth: 260 }}>
+                  <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a453f' }} />
+                  <input style={{ ...S.inp, paddingLeft: 30, fontSize: 13 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar…" />
+                </div>
+                <FilterSelect placeholder="Todos os tipos" value={filterType} onChange={setFilterType} options={types} onAdd={(v) => setTypes((p) => [...p, v])} />
+                <FilterSelect placeholder="Todos os países" value={filterCountry} onChange={(v) => { setFilterCountry(v); setFilterRegion('') }} options={allCountries} onAdd={addCountry} />
+                {filterCountry && (
+                  <FilterSelect placeholder="Todas as regiões" value={filterRegion} onChange={setFilterRegion} options={countriesRegions[filterCountry] || []} onAdd={(v) => addRegionToCountry(filterCountry, v)} />
+                )}
+                <button
+                  onClick={() => setShowNoStock((p) => !p)}
+                  title={showNoStock ? 'Ocultar sem stock' : 'Mostrar sem stock'}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 6,
+                    border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 11, fontFamily: FONT,
+                    background: showNoStock ? 'transparent' : 'rgba(200,150,62,0.1)',
+                    color: showNoStock ? '#4a453f' : '#c8963e', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+                  {showNoStock ? <Eye size={12} /> : <EyeOff size={12} />}
+                  {showNoStock ? 'Com stock' : 'Só com stock'}
+                </button>
+                <div style={{ marginLeft: 'auto', display: 'flex', background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                  {[{ m: 'list', I: List }, { m: 'grid', I: LayoutGrid }].map(({ m, I }) => (
+                    <button key={m} onClick={() => setListMode(m)}
+                      style={{ padding: '6px 9px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        background: listMode === m ? 'rgba(200,150,62,0.12)' : 'transparent',
+                        color: listMode === m ? '#c8963e' : '#3a3530', transition: 'all 0.15s' }}>
+                      <I size={13} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {listMode === 'list'
+                ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />
+                : <WineGridView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />}
+            </>
           )}
 
           {view === 'entradas' && (
@@ -1045,7 +1136,7 @@ export default function App() {
       {/* MODALS */}
       {modal && (
         <ModalShell onClose={closeModal}>
-          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={addWine} onClose={closeModal} />}
+          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} />}
           {modal === 'entry'       && liveWine && <EntryForm       wine={liveWine} onSave={addEntry}       onClose={closeModal} />}

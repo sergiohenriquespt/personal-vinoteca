@@ -1262,15 +1262,23 @@ function WineThumb({ photo, type, size = 40 }) {
   )
 }
 
-function ModalShell({ onClose, children }) {
+function ModalShell({ onClose, children, isMobile }) {
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', display: 'flex',
-        alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto',
-        padding: '40px 16px', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)',
+        display: 'flex', zIndex: 100, backdropFilter: 'blur(4px)',
+        ...(isMobile
+          ? { alignItems: 'flex-end', justifyContent: 'stretch' }
+          : { alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 16px' })
+      }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ background: '#1e1b16', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14,
-          padding: '28px 28px 24px', width: '100%', maxWidth: 560, margin: 'auto 0', fontFamily: FONT }}>
+        style={{
+          background: '#1e1b16', border: '1px solid rgba(255,255,255,0.1)',
+          fontFamily: FONT, overflowY: 'auto',
+          ...(isMobile
+            ? { width: '100%', maxHeight: '92vh', borderRadius: '16px 16px 0 0', padding: '20px 20px 32px' }
+            : { borderRadius: 14, padding: '28px 28px 24px', width: '100%', maxWidth: 560, margin: 'auto 0' })
+        }}>
         {children}
       </div>
     </div>
@@ -1870,31 +1878,36 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd }) {
 }
 
 // ─── WINE LIST VIEW ───────────────────────────────────────────────────────────
-function WineListRow({ wine, onClick }) {
+function WineListRow({ wine, onClick, isMobile }) {
   return (
     <div onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s', opacity: wine.quantity === 0 ? 0.45 : 1 }}
+      style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, padding: isMobile ? '10px 14px' : '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s', opacity: wine.quantity === 0 ? 0.45 : 1 }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-      <WineThumb photo={wine.photo} type={wine.type} size={26} />
+      <WineThumb photo={wine.photo} type={wine.type} size={isMobile ? 22 : 26} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 400, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wine.name}</div>
-        <div style={{ fontSize: 11, color: '#9a8f82', marginTop: 1 }}>{[wine.region, wine.country].filter(Boolean).join(', ')}</div>
+        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 400, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wine.name}</div>
+        <div style={{ fontSize: 11, color: '#9a8f82', marginTop: 1 }}>
+          {isMobile
+            ? <>{[wine.region, wine.country].filter(Boolean).join(', ')}{wine.year ? ` · ${wine.year}` : ''}</>
+            : [wine.region, wine.country].filter(Boolean).join(', ')}
+        </div>
       </div>
-      <div style={{ width: 86, flexShrink: 0 }}><Badge type={wine.type} /></div>
-      <div style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.year || '—'}</div>
-      <div style={{ width: 76, flexShrink: 0 }}><Stars value={wine.personalRating} size={12} /></div>
-      <div style={{ width: 44, flexShrink: 0, textAlign: 'center' }}>
+      {!isMobile && <div style={{ width: 86, flexShrink: 0 }}><Badge type={wine.type} /></div>}
+      {!isMobile && <div style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.year || '—'}</div>}
+      {!isMobile && <div style={{ width: 76, flexShrink: 0 }}><Stars value={wine.personalRating} size={12} /></div>}
+      <div style={{ width: isMobile ? 32 : 44, flexShrink: 0, textAlign: 'center' }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: wine.quantity > 0 ? '#68c880' : '#e87080' }}>{wine.quantity}</span>
       </div>
-      <div style={{ width: 72, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#c8963e' }}>{fmt(wine.purchasePrice)}</div>
+      {!isMobile && <div style={{ width: 72, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#c8963e' }}>{fmt(wine.purchasePrice)}</div>}
+      {isMobile && <div style={{ flexShrink: 0, textAlign: 'right', fontSize: 12, color: '#c8963e', minWidth: 56 }}>{fmt(wine.purchasePrice)}</div>}
     </div>
   )
 }
 
-function WineListView({ wines, onWineClick }) {
+function WineListView({ wines, onWineClick, isMobile }) {
   const [sortKey, setSortKey] = useState('name')
-  const [sortDir, setSortDir] = useState(1) // 1 = asc, -1 = desc
+  const [sortDir, setSortDir] = useState(1)
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => -d)
@@ -1927,19 +1940,18 @@ function WineListView({ wines, onWineClick }) {
 
   return (
     <div style={{ background: '#1e1b16', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#161310' }}>
-        <div style={{ width: 26, flexShrink: 0 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, padding: isMobile ? '7px 14px' : '7px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#161310' }}>
+        <div style={{ width: isMobile ? 22 : 26, flexShrink: 0 }} />
         <ColHead label="Vinho"  col="name"           width={undefined} style={{ flex: 1 }} />
-        <ColHead label="Tipo"   col="type"           width={86} />
-        <ColHead label="Ano"    col="year"           width={44} align="center" />
-        <ColHead label="Rating" col="personalRating" width={76} />
-        <ColHead label="Qtd."   col="quantity"       width={44} align="center" />
-        <ColHead label="Preço"  col="purchasePrice"  width={72} align="right" />
+        {!isMobile && <ColHead label="Tipo"   col="type"           width={86} />}
+        {!isMobile && <ColHead label="Ano"    col="year"           width={44} align="center" />}
+        {!isMobile && <ColHead label="Rating" col="personalRating" width={76} />}
+        <ColHead label="Qtd."  col="quantity"       width={isMobile ? 32 : 44} align="center" />
+        <ColHead label="Preço" col="purchasePrice"  width={isMobile ? 56 : 72} align="right" />
       </div>
       {sorted.length === 0
         ? <div style={{ textAlign: 'center', padding: '48px 0', color: '#4a453f' }}><Wine size={32} style={{ marginBottom: 10, opacity: 0.2 }} /><p style={{ fontSize: 13 }}>Nenhum vinho encontrado.</p></div>
-        : sorted.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} />)}
+        : sorted.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} isMobile={isMobile} />)}
     </div>
   )
 }
@@ -1978,7 +1990,7 @@ function WineGridView({ wines, onWineClick }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ wines, entries, consumptions }) {
+function Dashboard({ wines, entries, consumptions, isMobile }) {
   const inStock       = wines.filter(w => w.quantity > 0)
   const totalBottles  = wines.reduce((s, w) => s + w.quantity, 0)
   const totalValue    = inStock.reduce((s, w) => s + totalV(w), 0)
@@ -2026,7 +2038,7 @@ function Dashboard({ wines, entries, consumptions }) {
       </div>
 
       {/* Garrafas por tipo + Por país em stock */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div style={{ ...S.stat, padding: 20 }}>
           <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Garrafas em stock por tipo</h3>
           {Object.entries(byTypeStock).sort((a, b) => b[1].bottles - a[1].bottles).map(([type, d]) => {
@@ -2100,6 +2112,7 @@ export default function App() {
   const [filterRegion,   setFilterRegion]   = useState('')
   const [listMode,       setListMode]       = useState('list')
   const [sidebarOpen,    setSidebarOpen]    = useState(true)
+  const [isMobile,       setIsMobile]       = useState(false)
   const [modal,          setModal]          = useState(null)
   const [activeWine,     setActiveWine]     = useState(null)
   const [searchEntradas, setSearchEntradas] = useState('')
@@ -2121,7 +2134,12 @@ export default function App() {
   const addRegionToCountry = (country, region) => setCountriesRegions((p) => ({ ...p, [country]: [...(p[country] || []), region] }))
 
   useEffect(() => {
-    const h = () => setSidebarOpen(window.innerWidth >= 768)
+    const h = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) setSidebarOpen(false)
+      else setSidebarOpen(true)
+    }
     window.addEventListener('resize', h); h()
     return () => window.removeEventListener('resize', h)
   }, [])
@@ -2173,8 +2191,8 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', color: '#e8dece', fontFamily: FONT }}>
 
-      {/* SIDEBAR */}
-      {sidebarOpen && (
+      {/* SIDEBAR (desktop only) */}
+      {sidebarOpen && !isMobile && (
         <div style={{ width: 216, flexShrink: 0, background: '#161310', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
           <div style={{ padding: '0 20px 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.25)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -2208,22 +2226,29 @@ export default function App() {
 
       {/* MAIN */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* header — altura fixa igual em todas as vistas */}
-        <div style={{ padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161310', display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
-          <button onClick={() => setSidebarOpen((p) => !p)} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: 4, display: 'flex' }}>
-            <Menu size={17} />
-          </button>
+        {/* header */}
+        <div style={{ padding: `0 ${isMobile ? 16 : 24}px`, borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161310', display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
+          {!isMobile && (
+            <button onClick={() => setSidebarOpen((p) => !p)} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: 4, display: 'flex' }}>
+              <Menu size={17} />
+            </button>
+          )}
+          {isMobile && (
+            <div style={{ width: 24, height: 24, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.25)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wine size={12} color="#c8963e" />
+            </div>
+          )}
           <h1 style={{ margin: 0, fontSize: 12, fontWeight: 400, color: '#6a6058', fontFamily: FONT, letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
             {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos' }[view]}
           </h1>
           {view === 'adega' && (
-            <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />Vinho</Btn>
+            <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>
           )}
         </div>
 
         {/* content */}
-        <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
-          {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} />}
+        <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 80 : 24 }}>
+          {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
 
           {view === 'adega' && (
             <>
@@ -2234,9 +2259,9 @@ export default function App() {
                   <input style={{ ...S.inp, paddingLeft: 30, fontSize: 13 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar…" />
                 </div>
                 <FilterSelect placeholder="Todos os tipos" value={filterType} onChange={setFilterType} options={types} onAdd={(v) => setTypes((p) => [...p, v])} />
-                <FilterSelect placeholder="Todos os países" value={filterCountry} onChange={(v) => { setFilterCountry(v); setFilterRegion('') }} options={allCountries} onAdd={addCountry} />
-                {filterCountry && (
-                  <FilterSelect placeholder="Todas as regiões" value={filterRegion} onChange={setFilterRegion} options={countriesRegions[filterCountry] || []} onAdd={(v) => addRegionToCountry(filterCountry, v)} />
+                {!isMobile && <FilterSelect placeholder="Países" value={filterCountry} onChange={(v) => { setFilterCountry(v); setFilterRegion('') }} options={allCountries} onAdd={addCountry} />}
+                {!isMobile && filterCountry && (
+                  <FilterSelect placeholder="Regiões" value={filterRegion} onChange={setFilterRegion} options={countriesRegions[filterCountry] || []} onAdd={(v) => addRegionToCountry(filterCountry, v)} />
                 )}
                 <button
                   onClick={() => setShowNoStock((p) => !p)}
@@ -2246,7 +2271,7 @@ export default function App() {
                     background: showNoStock ? 'transparent' : 'rgba(200,150,62,0.1)',
                     color: showNoStock ? '#4a453f' : '#c8963e', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
                   {showNoStock ? <Eye size={12} /> : <EyeOff size={12} />}
-                  {showNoStock ? 'Com stock' : 'Só com stock'}
+                  {!isMobile ? (showNoStock ? ' Com stock' : ' Só stock') : ''}
                 </button>
                 <div style={{ marginLeft: 'auto', display: 'flex', background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                   {[{ m: 'list', I: List }, { m: 'grid', I: LayoutGrid }].map(({ m, I }) => (
@@ -2260,7 +2285,7 @@ export default function App() {
                 </div>
               </div>
               {listMode === 'list'
-                ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />
+                ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} isMobile={isMobile} />
                 : <WineGridView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />}
             </>
           )}
@@ -2351,9 +2376,25 @@ export default function App() {
         </div>
       </div>
 
+      {/* BOTTOM NAV (mobile) */}
+      {isMobile && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', zIndex: 20 }}>
+          {NAV.map((n) => (
+            <button key={n.id} onClick={() => setView(n.id)} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+              background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s',
+              color: view === n.id ? '#c8963e' : '#3a3530', fontFamily: FONT,
+            }}>
+              {n.icon}
+              <span style={{ fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: view === n.id ? 500 : 300 }}>{n.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* MODALS */}
       {modal && (
-        <ModalShell onClose={closeModal}>
+        <ModalShell onClose={closeModal} isMobile={isMobile}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} />}

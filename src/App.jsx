@@ -1893,20 +1893,53 @@ function WineListRow({ wine, onClick }) {
 }
 
 function WineListView({ wines, onWineClick }) {
+  const [sortKey, setSortKey] = useState('name')
+  const [sortDir, setSortDir] = useState(1) // 1 = asc, -1 = desc
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortDir(d => -d)
+    else { setSortKey(key); setSortDir(1) }
+  }
+
+  const sorted = useMemo(() => {
+    return [...wines].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey]
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      if (typeof av === 'string') return av.localeCompare(bv, 'pt') * sortDir
+      return (av - bv) * sortDir
+    })
+  }, [wines, sortKey, sortDir])
+
+  const ColHead = ({ label, col, width, align = 'left', style = {} }) => {
+    const active = sortKey === col
+    const arrow  = active ? (sortDir === 1 ? ' ↑' : ' ↓') : ''
+    return (
+      <div onClick={() => handleSort(col)}
+        style={{ width, flexShrink: 0, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+          textAlign: align, cursor: 'pointer', userSelect: 'none', fontWeight: active ? 700 : 600,
+          color: active ? '#c8963e' : '#3a3530', transition: 'color 0.15s', ...style }}>
+        {label}{arrow}
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: '#1e1b16', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+      {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#161310' }}>
         <div style={{ width: 26, flexShrink: 0 }} />
-        <div style={{ flex: 1, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Vinho</div>
-        <div style={{ width: 86, flexShrink: 0, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Tipo</div>
-        <div style={{ width: 44, flexShrink: 0, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Ano</div>
-        <div style={{ width: 76, flexShrink: 0, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rating</div>
-        <div style={{ width: 44, flexShrink: 0, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Qtd.</div>
-        <div style={{ width: 72, flexShrink: 0, fontSize: 10, color: '#3a3530', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Preço</div>
+        <ColHead label="Vinho"  col="name"           width={undefined} style={{ flex: 1 }} />
+        <ColHead label="Tipo"   col="type"           width={86} />
+        <ColHead label="Ano"    col="year"           width={44} align="center" />
+        <ColHead label="Rating" col="personalRating" width={76} />
+        <ColHead label="Qtd."   col="quantity"       width={44} align="center" />
+        <ColHead label="Preço"  col="purchasePrice"  width={72} align="right" />
       </div>
-      {wines.length === 0
+      {sorted.length === 0
         ? <div style={{ textAlign: 'center', padding: '48px 0', color: '#4a453f' }}><Wine size={32} style={{ marginBottom: 10, opacity: 0.2 }} /><p style={{ fontSize: 13 }}>Nenhum vinho encontrado.</p></div>
-        : wines.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} />)}
+        : sorted.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} />)}
     </div>
   )
 }
@@ -1946,30 +1979,44 @@ function WineGridView({ wines, onWineClick }) {
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ wines, entries, consumptions }) {
+  const inStock       = wines.filter(w => w.quantity > 0)
   const totalBottles  = wines.reduce((s, w) => s + w.quantity, 0)
-  const totalValue    = wines.reduce((s, w) => s + totalV(w), 0)
+  const totalValue    = inStock.reduce((s, w) => s + totalV(w), 0)
   const totalConsumed = consumptions.reduce((s, c) => s + c.quantity, 0)
 
-  const byType = wines.reduce((acc, w) => {
-    if (!acc[w.type]) acc[w.type] = { count: 0, bottles: 0, value: 0 }
-    acc[w.type].count++; acc[w.type].bottles += w.quantity; acc[w.type].value += totalV(w)
+  // "Garrafas por tipo" — só em stock
+  const byTypeStock = inStock.reduce((acc, w) => {
+    if (!acc[w.type]) acc[w.type] = { bottles: 0 }
+    acc[w.type].bottles += w.quantity
+    return acc
+  }, {})
+  const maxBottles = Math.max(...Object.values(byTypeStock).map(v => v.bottles), 1)
+
+  // "Por país" em stock
+  const byCountryStock = inStock.reduce((acc, w) => {
+    if (!acc[w.country]) acc[w.country] = { count: 0 }
+    acc[w.country].count++
     return acc
   }, {})
 
-  const byCountry = wines.reduce((acc, w) => {
-    if (!acc[w.country]) acc[w.country] = { count: 0, bottles: 0 }
-    acc[w.country].count++; acc[w.country].bottles += w.quantity
+  // "Por país" total (todas as referências)
+  const byCountryAll = wines.reduce((acc, w) => {
+    if (!acc[w.country]) acc[w.country] = { count: 0 }
+    acc[w.country].count++
     return acc
   }, {})
 
-  const topWines   = [...wines].sort((a, b) => totalV(b) - totalV(a)).slice(0, 5)
-  const maxBottles = Math.max(...Object.values(byType).map((v) => v.bottles), 1)
+  const topWines = [...inStock].sort((a, b) => totalV(b) - totalV(a)).slice(0, 5)
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
+      {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
-        {[{ l: 'Referências', v: wines.length, c: '#e8dece' }, { l: 'Garrafas', v: totalBottles, c: '#e8dece' },
-          { l: 'Valor Total', v: fmt(totalValue), c: '#c8963e' }, { l: 'Consumidas', v: totalConsumed, c: '#9a8f82' }
+        {[
+          { l: 'Referências em stock', v: inStock.length,      c: '#e8dece' },
+          { l: 'Garrafas em stock',    v: totalBottles,         c: '#e8dece' },
+          { l: 'Valor Total',          v: fmt(totalValue),      c: '#c8963e' },
+          { l: 'Consumidas',           v: totalConsumed,        c: '#9a8f82' },
         ].map(({ l, v, c }) => (
           <div key={l} style={{ ...S.stat, padding: '16px 18px' }}>
             <div style={{ fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
@@ -1978,10 +2025,11 @@ function Dashboard({ wines, entries, consumptions }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+      {/* Garrafas por tipo + Por país em stock */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div style={{ ...S.stat, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Garrafas por tipo</h3>
-          {Object.entries(byType).sort((a, b) => b[1].bottles - a[1].bottles).map(([type, d]) => {
+          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Garrafas em stock por tipo</h3>
+          {Object.entries(byTypeStock).sort((a, b) => b[1].bottles - a[1].bottles).map(([type, d]) => {
             const c = getTC(type)
             return (
               <div key={type} style={{ marginBottom: 10 }}>
@@ -1997,14 +2045,24 @@ function Dashboard({ wines, entries, consumptions }) {
           })}
         </div>
         <div style={{ ...S.stat, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país</h3>
+          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país — em stock</h3>
           <PieChart
-            total={wines.length}
-            data={Object.entries(byCountry).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))}
+            total={inStock.length}
+            data={Object.entries(byCountryStock).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))}
           />
         </div>
       </div>
 
+      {/* Por país total */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país — todas as referências ({wines.length})</h3>
+        <PieChart
+          total={wines.length}
+          data={Object.entries(byCountryAll).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))}
+        />
+      </div>
+
+      {/* Top 5 */}
       <div style={{ ...S.stat, padding: 20 }}>
         <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Top 5 por valor em adega</h3>
         {topWines.map((w, i) => (
@@ -2124,7 +2182,7 @@ export default function App() {
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 200, color: '#e8dece', fontFamily: FONT, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Videiras</div>
-              <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 400, marginTop: 1 }}>coleção pessoal</div>
+              <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 400, marginTop: 1 }}>cellar collection</div>
             </div>
           </div>
 

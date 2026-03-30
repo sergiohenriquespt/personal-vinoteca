@@ -1189,6 +1189,11 @@ const totalV = (w) => (w.purchasePrice || 0) * (w.quantity || 0)
 const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1
 
 const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.onerror = reject
+  reader.readAsDataURL(file)
+})
 
 // ─── DB MAPPING ───────────────────────────────────────────────────────────────
 const wineFromDb = (r) => ({
@@ -2186,15 +2191,23 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      const [wRes, eRes, cRes] = await Promise.all([
-        supabase.from('videiras_wines').select('*').order('name'),
-        supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
-        supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
-      ])
-      if (wRes.data) setWines(wRes.data.map(wineFromDb))
-      if (eRes.data) setEntries(eRes.data.map(entryFromDb))
-      if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
-      setLoading(false)
+      try {
+        const [wRes, eRes, cRes] = await Promise.all([
+          supabase.from('videiras_wines').select('*').order('name'),
+          supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
+          supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
+        ])
+        if (wRes.error) console.error('wines:', wRes.error)
+        if (eRes.error) console.error('entries:', eRes.error)
+        if (cRes.error) console.error('consumptions:', cRes.error)
+        if (wRes.data) setWines(wRes.data.map(wineFromDb))
+        if (eRes.data) setEntries(eRes.data.map(entryFromDb))
+        if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])

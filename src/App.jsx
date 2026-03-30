@@ -1225,11 +1225,6 @@ const consumptionToDb = (c) => ({
   wine_id: c.wineId, date: c.date, quantity: c.quantity,
   rating: c.rating || null, notes: c.notes || '',
 })
-  const reader = new FileReader()
-  reader.onload  = () => resolve(reader.result)
-  reader.onerror = reject
-  reader.readAsDataURL(file)
-})
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const S = {

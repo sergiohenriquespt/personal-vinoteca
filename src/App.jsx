@@ -2057,6 +2057,26 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
 
   const topWines = [...inStock].sort((a, b) => totalV(b) - totalV(a)).slice(0, 5)
 
+  // Consumos por região
+  const byRegion = consumptions.reduce((acc, c) => {
+    const w = wines.find(x => x.id === c.wineId)
+    if (!w) return acc
+    const key = w.region || w.country || 'Desconhecida'
+    if (!acc[key]) acc[key] = { count: 0, bottles: 0, avgRating: 0, ratings: [] }
+    acc[key].count++
+    acc[key].bottles += c.quantity
+    if (c.rating) acc[key].ratings.push(c.rating)
+    return acc
+  }, {})
+  // compute avgRating
+  Object.values(byRegion).forEach(d => {
+    d.avgRating = d.ratings.length ? (d.ratings.reduce((s, r) => s + r, 0) / d.ratings.length) : 0
+  })
+  const topRegions = Object.entries(byRegion)
+    .sort((a, b) => b[1].bottles - a[1].bottles)
+    .slice(0, 8)
+  const maxRegionBottles = topRegions.length ? topRegions[0][1].bottles : 1
+
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
       {/* KPIs */}
@@ -2109,6 +2129,30 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
           total={wines.length}
           data={Object.entries(byCountryAll).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))}
         />
+      </div>
+
+      {/* Consumos por região */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Mais consumidos por região</h3>
+        {topRegions.length === 0
+          ? <p style={{ fontSize: 13, color: '#3a3530' }}>Sem consumos registados.</p>
+          : topRegions.map(([region, d]) => (
+            <div key={region} style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                <span style={{ fontSize: 13, color: '#e8dece', fontWeight: 400 }}>{region}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                  {d.avgRating > 0 && (
+                    <span style={{ fontSize: 11, color: '#c8963e' }}>{'★'.repeat(Math.round(d.avgRating))} {d.avgRating.toFixed(1)}</span>
+                  )}
+                  <span style={{ fontSize: 12, color: '#9a8f82', minWidth: 60, textAlign: 'right' }}>{d.bottles} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
+                </div>
+              </div>
+              <div style={{ height: 3, background: '#26221c', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(d.bottles / maxRegionBottles) * 100}%`, background: '#c8963e', opacity: 0.5, borderRadius: 2, transition: 'width 0.4s ease' }} />
+              </div>
+            </div>
+          ))
+        }
       </div>
 
       {/* Top 5 */}

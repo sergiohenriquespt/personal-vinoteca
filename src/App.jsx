@@ -2641,7 +2641,7 @@ export default function App() {
         </div>
 
         {/* content */}
-        <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 80 : 24 }}>
+        <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 84 : 24 }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
           {view === 'admin' && isAdmin && <AdminPanel session={session} onClaimData={async () => { const { data } = await supabase.rpc('videiras_claim_data'); if (data) { const [wRes,eRes,cRes] = await Promise.all([supabase.from('videiras_wines').select('*').order('name'),supabase.from('videiras_entries').select('*').order('date',{ascending:false}),supabase.from('videiras_consumptions').select('*').order('date',{ascending:false})]); if(wRes.data)setWines(wRes.data.map(wineFromDb)); if(eRes.data)setEntries(eRes.data.map(entryFromDb)); if(cRes.data)setConsumptions(cRes.data.map(consumptionFromDb)); alert(`Dados reclamados: ${data.wines} vinhos, ${data.consumptions} consumos`); } }} hasUnclaimedData={wines.filter(w=>!w.userId).length > 0} />}
 
@@ -2773,17 +2773,32 @@ export default function App() {
 
       {/* BOTTOM NAV (mobile) */}
       {isMobile && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', zIndex: 20 }}>
-          {NAV.map((n) => (
-            <button key={n.id} onClick={() => setView(n.id)} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-              background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s',
-              color: view === n.id ? '#c8963e' : '#3a3530', fontFamily: FONT,
-            }}>
-              {n.icon}
-              <span style={{ fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: view === n.id ? 500 : 300 }}>{n.label}</span>
-            </button>
-          ))}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 58, background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', zIndex: 20 }}>
+          {NAV.map((n) => {
+            const active = view === n.id
+            return (
+              <button key={n.id} onClick={() => setView(n.id)} style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s',
+                color: active ? '#c8963e' : '#3a3530', fontFamily: FONT,
+                padding: '6px 2px',
+              }}>
+                {/* icon wrapper — highlight active */}
+                <div style={{
+                  padding: '3px 12px', borderRadius: 12,
+                  background: active ? 'rgba(200,150,62,0.12)' : 'transparent',
+                  transition: 'background 0.15s',
+                }}>
+                  {n.icon}
+                </div>
+                <span style={{
+                  fontSize: 8, letterSpacing: '0.04em', textTransform: 'uppercase',
+                  fontWeight: active ? 600 : 300,
+                  opacity: active ? 1 : 0.6,
+                }}>{n.label}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 

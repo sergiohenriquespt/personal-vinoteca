@@ -2029,6 +2029,59 @@ function WineGridView({ wines, onWineClick }) {
 }
 
 
+
+// ─── CHANGE PASSWORD SCREEN ───────────────────────────────────────────────────
+function ChangePasswordScreen({ profile, onDone }) {
+  const [pwd,     setPwd]     = useState('')
+  const [pwd2,    setPwd2]    = useState('')
+  const [error,   setError]   = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (pwd.length < 6) return setError('A password deve ter pelo menos 6 caracteres.')
+    if (pwd !== pwd2) return setError('As passwords não coincidem.')
+    setLoading(true); setError('')
+    const { error: pwErr } = await supabase.auth.updateUser({ password: pwd })
+    if (pwErr) { setError(pwErr.message); setLoading(false); return }
+    // Clear must_change_password flag
+    await supabase.from('videiras_profiles').update({ must_change_password: false }).eq('id', profile.id)
+    onDone()
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div style={{ width: 48, height: 48, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <KeyRound size={20} color="#c8963e" />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 300, color: '#e8dece', marginBottom: 6 }}>Define a tua password</div>
+          <div style={{ fontSize: 13, color: '#4a453f' }}>Por segurança, define uma nova password para a tua conta.</div>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Nova password</div>
+            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} required
+              style={{ ...S.inp, fontSize: 14 }} placeholder="Mínimo 6 caracteres" />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Confirmar password</div>
+            <input type="password" value={pwd2} onChange={e => setPwd2(e.target.value)} required
+              style={{ ...S.inp, fontSize: 14 }} placeholder="Repetir password" />
+          </div>
+          {error && <div style={{ fontSize: 12, color: '#e87080', padding: '8px 12px', background: 'rgba(232,112,128,0.08)', borderRadius: 6, border: '1px solid rgba(232,112,128,0.2)' }}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{ marginTop: 8, background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 6, padding: '12px', fontSize: 13, fontWeight: 500, fontFamily: FONT, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'A guardar…' : 'Guardar password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen() {
   const [email,    setEmail]    = useState('')
@@ -2083,9 +2136,14 @@ function LoginScreen() {
 function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
   const [users,       setUsers]       = useState([])
   const [loadingU,    setLoadingU]    = useState(true)
+  const [tab,         setTab]         = useState('create')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName,  setInviteName]  = useState('')
   const [inviting,    setInviting]    = useState(false)
+  const [createEmail, setCreateEmail] = useState('')
+  const [createName,  setCreateName]  = useState('')
+  const [createPwd,   setCreatePwd]   = useState('')
+  const [creating,    setCreating]    = useState(false)
   const [msg,         setMsg]         = useState('')
   const [claiming,    setClaiming]    = useState(false)
 
@@ -2098,6 +2156,16 @@ function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
     if (body) opts.body = JSON.stringify(body)
     const r = await fetch(`${EDGE_FN_URL}?action=${action}`, opts)
     return r.json()
+  }
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (createPwd.length < 6) return setMsg('Erro: A password deve ter pelo menos 6 caracteres.')
+    setCreating(true); setMsg('')
+    const data = await adminFetch('create', 'POST', { email: createEmail, name: createName, password: createPwd })
+    if (data.ok) { setMsg(`Utilizador ${createEmail} criado!`); setCreateEmail(''); setCreateName(''); setCreatePwd(''); loadUsers() }
+    else setMsg(`Erro: ${data.error}`)
+    setCreating(false)
   }
 
   const loadUsers = async () => {
@@ -2150,30 +2218,69 @@ function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
         </div>
       )}
 
-      {/* Invite form */}
+      {/* Create / Invite form */}
       <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 20px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={14} /> Convidar utilizador
-        </h3>
-        <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
-              <input value={inviteName} onChange={e => setInviteName(e.target.value)}
-                style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
+        {/* Tab toggle */}
+        <div style={{ display: 'flex', gap: 1, marginBottom: 20, background: '#0d0b09', borderRadius: 7, padding: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+          {[['create', 'Criar utilizador'], ['invite', 'Convidar por email']].map(([t, label]) => (
+            <button key={t} onClick={() => { setTab(t); setMsg('') }} style={{
+              flex: 1, padding: '7px 10px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: FONT,
+              fontSize: 11, fontWeight: 400, letterSpacing: '0.04em', transition: 'all 0.15s',
+              background: tab === t ? '#1e1b16' : 'transparent',
+              color: tab === t ? '#c8963e' : '#4a453f',
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {tab === 'create' && (
+          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
+                <input value={createName} onChange={e => setCreateName(e.target.value)}
+                  style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
+                <input type="email" required value={createEmail} onChange={e => setCreateEmail(e.target.value)}
+                  style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+              </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
-              <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Password temporária *</div>
+              <input type="password" required value={createPwd} onChange={e => setCreatePwd(e.target.value)}
+                style={{ ...S.inp, fontSize: 13 }} placeholder="Mínimo 6 caracteres" />
+              <div style={{ fontSize: 11, color: '#3a3530', marginTop: 5 }}>O utilizador será obrigado a alterar no primeiro login.</div>
             </div>
-          </div>
-          {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
-          <button type="submit" disabled={inviting}
-            style={{ alignSelf: 'flex-start', background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: inviting ? 'not-allowed' : 'pointer', opacity: inviting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-            {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
-          </button>
-        </form>
+            {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
+            <button type="submit" disabled={creating}
+              style={{ alignSelf: 'flex-start', background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {creating ? 'A criar…' : <><UserCheck size={13} /> Criar utilizador</>}
+            </button>
+          </form>
+        )}
+
+        {tab === 'invite' && (
+          <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
+                <input value={inviteName} onChange={e => setInviteName(e.target.value)}
+                  style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
+                <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                  style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+              </div>
+            </div>
+            {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
+            <button type="submit" disabled={inviting}
+              style={{ alignSelf: 'flex-start', background: 'none', color: '#c8963e', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 400, fontFamily: FONT, cursor: inviting ? 'not-allowed' : 'pointer', opacity: inviting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Users list */}
@@ -2193,6 +2300,7 @@ function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
                     {isSelf && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.15)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>TU</span>}
                     {u.role === 'admin' && <span style={{ fontSize: 9, background: 'rgba(104,200,128,0.12)', color: '#68c880', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>ADMIN</span>}
                     {!u.active && <span style={{ fontSize: 9, background: 'rgba(232,112,128,0.12)', color: '#e87080', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>INACTIVO</span>}
+                    {u.must_change_password && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.12)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>1º LOGIN</span>}
                   </div>
                   <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{u.email}</div>
                 </div>
@@ -2556,6 +2664,8 @@ export default function App() {
   )
 
   if (!session) return <LoginScreen />
+
+  if (profile?.must_change_password) return <ChangePasswordScreen profile={profile} onDone={() => setProfile(p => ({ ...p, must_change_password: false }))} />
 
   if (profile && !profile.active) return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: FONT }}>

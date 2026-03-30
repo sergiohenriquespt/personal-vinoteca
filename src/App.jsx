@@ -4,6 +4,7 @@ import {
   Wine, Plus, Search, BarChart3, LogIn, LogOut,
   Edit2, Trash2, X, Menu, Sparkles, Check,
   LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
+  ShieldCheck, Users, UserCheck, UserX, Settings, KeyRound,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -17,6 +18,7 @@ const ANTHROPIC_API_KEY = ''
 const SUPA_URL = 'https://cqgpgryldmzogfygpybl.supabase.co'
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZ3BncnlsZG16b2dmeWdweWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDMwMjksImV4cCI6MjA4ODI3OTAyOX0.MjkBexUvuAAU7sYcRs3uPaJh52jdMG723aqeDVuoe9w'
 const supabase = createClient(SUPA_URL, SUPA_KEY)
+const EDGE_FN_URL = `${SUPA_URL}/functions/v1/videiras-admin`
 
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -2026,6 +2028,195 @@ function WineGridView({ wines, onWineClick }) {
   )
 }
 
+
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen() {
+  const [email,    setEmail]    = useState('')
+  const [password, setPassword] = useState('')
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setError('Email ou password incorrectos.')
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{ width: 48, height: 48, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <Wine size={22} color="#c8963e" />
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 200, color: '#e8dece', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Videiras</div>
+          <div style={{ fontSize: 10, color: '#3a3530', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 4 }}>Cellar Collection</div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Email</div>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              style={{ ...S.inp, fontSize: 14 }} placeholder="o.teu@email.pt" />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Password</div>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+              style={{ ...S.inp, fontSize: 14 }} placeholder="••••••" />
+          </div>
+          {error && <div style={{ fontSize: 12, color: '#e87080', padding: '8px 12px', background: 'rgba(232,112,128,0.08)', borderRadius: 6, border: '1px solid rgba(232,112,128,0.2)' }}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{ marginTop: 8, background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 6, padding: '12px', fontSize: 13, fontWeight: 500, fontFamily: FONT, letterSpacing: '0.05em', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'opacity 0.15s' }}>
+            {loading ? 'A entrar…' : 'Entrar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
+function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
+  const [users,       setUsers]       = useState([])
+  const [loadingU,    setLoadingU]    = useState(true)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteName,  setInviteName]  = useState('')
+  const [inviting,    setInviting]    = useState(false)
+  const [msg,         setMsg]         = useState('')
+  const [claiming,    setClaiming]    = useState(false)
+
+  const adminFetch = async (action, method = 'GET', body = null) => {
+    const { data: { session: s } } = await supabase.auth.getSession()
+    const opts = {
+      method,
+      headers: { 'Authorization': `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+    }
+    if (body) opts.body = JSON.stringify(body)
+    const r = await fetch(`${EDGE_FN_URL}?action=${action}`, opts)
+    return r.json()
+  }
+
+  const loadUsers = async () => {
+    setLoadingU(true)
+    const data = await adminFetch('list')
+    if (data.users) setUsers(data.users)
+    setLoadingU(false)
+  }
+
+  useEffect(() => { loadUsers() }, [])
+
+  const handleInvite = async (e) => {
+    e.preventDefault()
+    setInviting(true); setMsg('')
+    const data = await adminFetch('invite', 'POST', { email: inviteEmail, name: inviteName })
+    if (data.ok) { setMsg(`Convite enviado para ${inviteEmail}!`); setInviteEmail(''); setInviteName(''); loadUsers() }
+    else setMsg(`Erro: ${data.error}`)
+    setInviting(false)
+  }
+
+  const toggleActive = async (u) => {
+    await adminFetch('set-active', 'POST', { userId: u.id, active: !u.active })
+    loadUsers()
+  }
+
+  const toggleRole = async (u) => {
+    await adminFetch('set-role', 'POST', { userId: u.id, role: u.role === 'admin' ? 'user' : 'admin' })
+    loadUsers()
+  }
+
+  const handleClaim = async () => {
+    setClaiming(true)
+    await onClaimData()
+    setClaiming(false)
+  }
+
+  return (
+    <div style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+      {/* Claim unclaimed data banner */}
+      {hasUnclaimedData && (
+        <div style={{ ...S.stat, padding: 16, marginBottom: 20, border: '1px solid rgba(200,150,62,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13, color: '#c8963e', fontWeight: 400 }}>Dados por associar</div>
+            <div style={{ fontSize: 12, color: '#6a5f52', marginTop: 2 }}>Existem vinhos sem utilizador associado. Clica para os reclamar para a tua conta.</div>
+          </div>
+          <button onClick={handleClaim} disabled={claiming}
+            style={{ background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '8px 16px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer', flexShrink: 0 }}>
+            {claiming ? 'A reclamar…' : 'Reclamar dados'}
+          </button>
+        </div>
+      )}
+
+      {/* Invite form */}
+      <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
+        <h3 style={{ margin: '0 0 20px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Users size={14} /> Convidar utilizador
+        </h3>
+        <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
+              <input value={inviteName} onChange={e => setInviteName(e.target.value)}
+                style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
+              <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+            </div>
+          </div>
+          {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
+          <button type="submit" disabled={inviting}
+            style={{ alignSelf: 'flex-start', background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: inviting ? 'not-allowed' : 'pointer', opacity: inviting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
+          </button>
+        </form>
+      </div>
+
+      {/* Users list */}
+      <div style={{ ...S.stat, padding: 24 }}>
+        <h3 style={{ margin: '0 0 20px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Users size={14} /> Utilizadores ({users.length})
+        </h3>
+        {loadingU
+          ? <div style={{ fontSize: 13, color: '#3a3530', padding: '20px 0', textAlign: 'center' }}>A carregar…</div>
+          : users.map(u => {
+            const isSelf = u.id === session?.user?.id
+            return (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: u.active ? '#e8dece' : '#3a3530', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {u.name || '—'}
+                    {isSelf && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.15)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>TU</span>}
+                    {u.role === 'admin' && <span style={{ fontSize: 9, background: 'rgba(104,200,128,0.12)', color: '#68c880', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>ADMIN</span>}
+                    {!u.active && <span style={{ fontSize: 9, background: 'rgba(232,112,128,0.12)', color: '#e87080', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>INACTIVO</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{u.email}</div>
+                </div>
+                {!isSelf && (
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => toggleRole(u)} title={u.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
+                      style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.role === 'admin' ? '#68c880' : '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                      {u.role === 'admin' ? 'Admin ✓' : 'Admin'}
+                    </button>
+                    <button onClick={() => toggleActive(u)} title={u.active ? 'Desactivar' : 'Activar'}
+                      style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.active ? '#e87080' : '#68c880', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                      {u.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })
+        }
+      </div>
+    </div>
+  )
+}
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ wines, entries, consumptions, isMobile }) {
   const inStock       = wines.filter(w => w.quantity > 0)
@@ -2182,6 +2373,9 @@ export default function App() {
   const [wines,            setWines]            = useState([])
   const [entries,          setEntries]          = useState([])
   const [consumptions,     setConsumptions]     = useState([])
+  const [session,          setSession]          = useState(null)
+  const [profile,          setProfile]          = useState(null)
+  const [authLoading,      setAuthLoading]      = useState(true)
   const [loading,          setLoading]          = useState(true)
   const [types,            setTypes]            = useState(INIT_TYPES)
   const [suppliers,        setSuppliers]        = useState(SUPPLIERS)
@@ -2226,8 +2420,28 @@ export default function App() {
     return () => window.removeEventListener('resize', h)
   }, [])
 
+  // ── AUTENTICAÇÃO ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadProfile = async (userId) => {
+      const { data } = await supabase.from('videiras_profiles').select('*').eq('id', userId).single()
+      setProfile(data || null)
+    }
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s)
+      if (s?.user) loadProfile(s.user.id)
+      setAuthLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
+      if (s?.user) loadProfile(s.user.id)
+      else { setProfile(null); setWines([]); setEntries([]); setConsumptions([]) }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   // ── CARREGAR DADOS DO SUPABASE ────────────────────────────────────────────
   useEffect(() => {
+    if (!session) return
     const load = async () => {
       setLoading(true)
       try {
@@ -2249,12 +2463,12 @@ export default function App() {
       }
     }
     load()
-  }, [])
+  }, [session])
 
   const closeModal = () => { setModal(null); setActiveWine(null) }
 
   const addWine = async (d) => {
-    const { data } = await supabase.from('videiras_wines').insert(wineToDb(d)).select().single()
+    const { data } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
     if (data) setWines((p) => [...p, wineFromDb(data)])
     closeModal()
   }
@@ -2275,7 +2489,7 @@ export default function App() {
     const wine = wines.find(w => w.id === activeWine.id)
     const newQty = (wine?.quantity || 0) + d.quantity
     const [eRes, wRes] = await Promise.all([
-      supabase.from('videiras_entries').insert(entryToDb({ ...d, wineId: activeWine.id })).select().single(),
+      supabase.from('videiras_entries').insert({ ...entryToDb({ ...d, wineId: activeWine.id }), user_id: session.user.id }).select().single(),
       supabase.from('videiras_wines').update({ quantity: newQty, purchase_price: d.price || wine?.purchasePrice || 0 }).eq('id', activeWine.id).select().single(),
     ])
     if (eRes.data) setEntries((p) => [...p, entryFromDb(eRes.data)])
@@ -2288,7 +2502,7 @@ export default function App() {
     const newQty = (wine?.quantity || 0) - d.quantity
     const updates = { quantity: newQty, ...(d.rating ? { personal_rating: d.rating } : {}) }
     const [cRes, wRes] = await Promise.all([
-      supabase.from('videiras_consumptions').insert(consumptionToDb({ ...d, wineId: activeWine.id })).select().single(),
+      supabase.from('videiras_consumptions').insert({ ...consumptionToDb({ ...d, wineId: activeWine.id }), user_id: session.user.id }).select().single(),
       supabase.from('videiras_wines').update(updates).eq('id', activeWine.id).select().single(),
     ])
     if (cRes.data) setConsumptions((p) => [...p, consumptionFromDb(cRes.data)])
@@ -2323,12 +2537,34 @@ export default function App() {
 
   const liveWine = activeWine ? wines.find((w) => w.id === activeWine.id) || activeWine : null
 
+  const isAdmin = profile?.role === 'admin'
+  const handleLogout = async () => { await supabase.auth.signOut() }
+
   const NAV = [
     { id: 'dashboard', icon: <BarChart3 size={15} />, label: 'Dashboard' },
     { id: 'adega',     icon: <Wine size={15} />,      label: 'Adega' },
     { id: 'entradas',  icon: <LogIn size={15} />,     label: 'Entradas' },
     { id: 'consumos',  icon: <LogOut size={15} />,    label: 'Consumos' },
+    ...(isAdmin ? [{ id: 'admin', icon: <ShieldCheck size={15} />, label: 'Admin' }] : []),
   ]
+
+  if (authLoading) return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, fontFamily: FONT }}>
+      <div style={{ width: 40, height: 40, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Wine size={20} color="#c8963e" /></div>
+      <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.2em', textTransform: 'uppercase' }}>A verificar sessão…</div>
+    </div>
+  )
+
+  if (!session) return <LoginScreen />
+
+  if (profile && !profile.active) return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
+      <UserX size={32} color="#e87080" />
+      <div style={{ fontSize: 15, color: '#e8dece' }}>Conta inactiva</div>
+      <div style={{ fontSize: 13, color: '#4a453f' }}>Contacta o administrador.</div>
+      <button onClick={handleLogout} style={{ marginTop: 8, background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#6a5f52', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>Sair</button>
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', color: '#e8dece', fontFamily: FONT }}>
@@ -2367,9 +2603,17 @@ export default function App() {
             ))}
           </nav>
 
-          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: 11, color: '#3a3530', lineHeight: 1.8, fontWeight: 300 }}>
-            <div>{wines.length} referências</div>
-            <div>{wines.reduce((s, w) => s + w.quantity, 0)} garrafas</div>
+          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: 11, color: '#3a3530', lineHeight: 1.8, fontWeight: 300, marginBottom: 10 }}>
+              <div>{wines.length} referências</div>
+              <div>{wines.reduce((s, w) => s + w.quantity, 0)} garrafas</div>
+            </div>
+            <div style={{ fontSize: 11, color: '#4a453f', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email}</div>
+            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: 0, transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#e87080'}
+              onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}>
+              <KeyRound size={11} /> Terminar sessão
+            </button>
           </div>
         </div>
       )}
@@ -2399,6 +2643,7 @@ export default function App() {
         {/* content */}
         <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 80 : 24 }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
+          {view === 'admin' && isAdmin && <AdminPanel session={session} onClaimData={async () => { const { data } = await supabase.rpc('videiras_claim_data'); if (data) { const [wRes,eRes,cRes] = await Promise.all([supabase.from('videiras_wines').select('*').order('name'),supabase.from('videiras_entries').select('*').order('date',{ascending:false}),supabase.from('videiras_consumptions').select('*').order('date',{ascending:false})]); if(wRes.data)setWines(wRes.data.map(wineFromDb)); if(eRes.data)setEntries(eRes.data.map(entryFromDb)); if(cRes.data)setConsumptions(cRes.data.map(consumptionFromDb)); alert(`Dados reclamados: ${data.wines} vinhos, ${data.consumptions} consumos`); } }} hasUnclaimedData={wines.filter(w=>!w.userId).length > 0} />}
 
           {view === 'adega' && (
             <>

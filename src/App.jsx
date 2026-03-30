@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import {
   Wine, Plus, Search, BarChart3, LogIn, LogOut,
   Edit2, Trash2, X, Menu, Sparkles, Check,
@@ -11,6 +12,11 @@ const FONT = "'Outfit', system-ui, sans-serif"
 // ─── ANTHROPIC API KEY ────────────────────────────────────────────────────────
 // Substitui pela tua chave em https://console.anthropic.com/
 const ANTHROPIC_API_KEY = ''
+
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://cqgpgryldmzogfygpybl.supabase.co'
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZ3BncnlsZG16b2dmeWdweWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDMwMjksImV4cCI6MjA4ODI3OTAyOX0.MjkBexUvuAAU7sYcRs3uPaJh52jdMG723aqeDVuoe9w'
+const supabase = createClient(SUPA_URL, SUPA_KEY)
 
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -1183,6 +1189,37 @@ const totalV = (w) => (w.purchasePrice || 0) * (w.quantity || 0)
 const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1
 
 const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+
+// ─── DB MAPPING ───────────────────────────────────────────────────────────────
+const wineFromDb = (r) => ({
+  id: r.id, name: r.name, type: r.type, country: r.country, region: r.region,
+  year: r.year, purchasePrice: parseFloat(r.purchase_price) || 0,
+  personalRating: parseFloat(r.personal_rating) || 0,
+  vivinoRating: r.vivino_rating != null ? parseFloat(r.vivino_rating) : null,
+  quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
+})
+const wineToDb = (w) => ({
+  name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
+  purchase_price: w.purchasePrice || 0, personal_rating: w.personalRating || 0,
+  vivino_rating: w.vivinoRating ?? null, quantity: w.quantity ?? 0,
+  photo: w.photo || null, notes: w.notes || '',
+})
+const entryFromDb = (r) => ({
+  id: r.id, wineId: r.wine_id, date: r.date,
+  quantity: r.quantity, supplier: r.supplier, price: parseFloat(r.price) || 0,
+})
+const entryToDb = (e) => ({
+  wine_id: e.wineId, date: e.date, quantity: e.quantity,
+  supplier: e.supplier || '', price: e.price || 0,
+})
+const consumptionFromDb = (r) => ({
+  id: r.id, wineId: r.wine_id, date: r.date, quantity: r.quantity,
+  rating: r.rating != null ? parseFloat(r.rating) : 0, notes: r.notes || '',
+})
+const consumptionToDb = (c) => ({
+  wine_id: c.wineId, date: c.date, quantity: c.quantity,
+  rating: c.rating || null, notes: c.notes || '',
+})
   const reader = new FileReader()
   reader.onload  = () => resolve(reader.result)
   reader.onerror = reject
@@ -2098,9 +2135,10 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
 
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [wines,            setWines]            = useState(INIT_WINES)
-  const [entries,          setEntries]          = useState(INIT_ENTRIES)
-  const [consumptions,     setConsumptions]     = useState(INIT_CONSUMPTIONS)
+  const [wines,            setWines]            = useState([])
+  const [entries,          setEntries]          = useState([])
+  const [consumptions,     setConsumptions]     = useState([])
+  const [loading,          setLoading]          = useState(true)
   const [types,            setTypes]            = useState(INIT_TYPES)
   const [suppliers,        setSuppliers]        = useState(SUPPLIERS)
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
@@ -2144,32 +2182,84 @@ export default function App() {
     return () => window.removeEventListener('resize', h)
   }, [])
 
+  // ── CARREGAR DADOS DO SUPABASE ────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      const [wRes, eRes, cRes] = await Promise.all([
+        supabase.from('videiras_wines').select('*').order('name'),
+        supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
+        supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
+      ])
+      if (wRes.data) setWines(wRes.data.map(wineFromDb))
+      if (eRes.data) setEntries(eRes.data.map(entryFromDb))
+      if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   const closeModal = () => { setModal(null); setActiveWine(null) }
 
-  const addWine    = (d) => { setWines((p) => [...p, { ...d, id: nextId(p) }]); closeModal() }
-  const editWine   = (d) => { setWines((p) => p.map((w) => w.id === activeWine.id ? { ...w, ...d } : w)); closeModal() }
-  const deleteWine = (id) => { setWines((p) => p.filter((w) => w.id !== id)); closeModal() }
-
-  const addEntry = (d) => {
-    setEntries((p) => [...p, { ...d, id: nextId(p), wineId: activeWine.id }])
-    setWines((p) => p.map((w) => w.id !== activeWine.id ? w : { ...w, quantity: w.quantity + d.quantity, purchasePrice: d.price || w.purchasePrice }))
+  const addWine = async (d) => {
+    const { data } = await supabase.from('videiras_wines').insert(wineToDb(d)).select().single()
+    if (data) setWines((p) => [...p, wineFromDb(data)])
     closeModal()
   }
 
-  const addConsumption = (d) => {
-    setConsumptions((p) => [...p, { ...d, id: nextId(p), wineId: activeWine.id }])
-    setWines((p) => p.map((w) => w.id !== activeWine.id ? w : { ...w, quantity: w.quantity - d.quantity, ...(d.rating ? { personalRating: d.rating } : {}) }))
+  const editWine = async (d) => {
+    const { data } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select().single()
+    if (data) setWines((p) => p.map((w) => w.id === activeWine.id ? wineFromDb(data) : w))
     closeModal()
   }
 
-  const deleteEntry = (entry) => {
+  const deleteWine = async (id) => {
+    await supabase.from('videiras_wines').delete().eq('id', id)
+    setWines((p) => p.filter((w) => w.id !== id))
+    closeModal()
+  }
+
+  const addEntry = async (d) => {
+    const wine = wines.find(w => w.id === activeWine.id)
+    const newQty = (wine?.quantity || 0) + d.quantity
+    const [eRes, wRes] = await Promise.all([
+      supabase.from('videiras_entries').insert(entryToDb({ ...d, wineId: activeWine.id })).select().single(),
+      supabase.from('videiras_wines').update({ quantity: newQty, purchase_price: d.price || wine?.purchasePrice || 0 }).eq('id', activeWine.id).select().single(),
+    ])
+    if (eRes.data) setEntries((p) => [...p, entryFromDb(eRes.data)])
+    if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
+    closeModal()
+  }
+
+  const addConsumption = async (d) => {
+    const wine = wines.find(w => w.id === activeWine.id)
+    const newQty = (wine?.quantity || 0) - d.quantity
+    const updates = { quantity: newQty, ...(d.rating ? { personal_rating: d.rating } : {}) }
+    const [cRes, wRes] = await Promise.all([
+      supabase.from('videiras_consumptions').insert(consumptionToDb({ ...d, wineId: activeWine.id })).select().single(),
+      supabase.from('videiras_wines').update(updates).eq('id', activeWine.id).select().single(),
+    ])
+    if (cRes.data) setConsumptions((p) => [...p, consumptionFromDb(cRes.data)])
+    if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
+    closeModal()
+  }
+
+  const deleteEntry = async (entry) => {
+    const wine = wines.find(w => w.id === entry.wineId)
+    const newQty = Math.max(0, (wine?.quantity || 0) - entry.quantity)
+    await supabase.from('videiras_entries').delete().eq('id', entry.id)
+    const { data } = await supabase.from('videiras_wines').update({ quantity: newQty }).eq('id', entry.wineId).select().single()
     setEntries((p) => p.filter((e) => e.id !== entry.id))
-    setWines((p) => p.map((w) => w.id !== entry.wineId ? w : { ...w, quantity: Math.max(0, w.quantity - entry.quantity) }))
+    if (data) setWines((p) => p.map((w) => w.id !== entry.wineId ? w : wineFromDb(data)))
   }
 
-  const deleteConsumption = (consumption) => {
+  const deleteConsumption = async (consumption) => {
+    const wine = wines.find(w => w.id === consumption.wineId)
+    const newQty = (wine?.quantity || 0) + consumption.quantity
+    await supabase.from('videiras_consumptions').delete().eq('id', consumption.id)
+    const { data } = await supabase.from('videiras_wines').update({ quantity: newQty }).eq('id', consumption.wineId).select().single()
     setConsumptions((p) => p.filter((c) => c.id !== consumption.id))
-    setWines((p) => p.map((w) => w.id !== consumption.wineId ? w : { ...w, quantity: w.quantity + consumption.quantity }))
+    if (data) setWines((p) => p.map((w) => w.id !== consumption.wineId ? w : wineFromDb(data)))
   }
 
   const filtered = useMemo(() => wines.filter((w) => {
@@ -2190,6 +2280,14 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', color: '#e8dece', fontFamily: FONT }}>
+      {loading && (
+        <div style={{ position: 'fixed', inset: 0, background: '#0d0b09', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 200, gap: 16 }}>
+          <div style={{ width: 40, height: 40, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Wine size={20} color="#c8963e" />
+          </div>
+          <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.2em', textTransform: 'uppercase' }}>A carregar adega…</div>
+        </div>
+      )}
 
       {/* SIDEBAR (desktop only) */}
       {sidebarOpen && !isMobile && (

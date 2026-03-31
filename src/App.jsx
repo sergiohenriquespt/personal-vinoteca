@@ -1661,6 +1661,12 @@ function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) 
           onChange={(v) => set('supplier', v)}
           options={list}
           onAdd={(v) => { setSuppliers?.((p) => [...p, v]); set('supplier', v) }}
+          onRemove={(v) => {
+            const hasMovements = (entries || []).some(e => e.supplier === v)
+            if (hasMovements) { alert(`"${v}" tem entradas associadas e não pode ser eliminado.`); return }
+            setSuppliers?.((p) => p.filter(s => s !== v))
+            set('supplier', list.find(s => s !== v) || '')
+          }}
         />
       </div>
       <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0,00" /></div>

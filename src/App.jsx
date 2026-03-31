@@ -1660,10 +1660,15 @@ function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) 
           value={f.supplier}
           onChange={(v) => set('supplier', v)}
           options={list}
-          onAdd={(v) => { setSuppliers?.((p) => [...p, v].sort((a, b) => a.localeCompare(b, 'pt'))); set('supplier', v) }}
-          onRemove={(v) => {
+          onAdd={async (v) => {
+              await supabase.from('videiras_suppliers').insert({ name: v })
+              setSuppliers?.((p) => [...p, v].sort((a, b) => a.localeCompare(b, 'pt')))
+              set('supplier', v)
+            }}
+          onRemove={async (v) => {
             const hasMovements = (entries || []).some(e => e.supplier === v)
             if (hasMovements) { alert(`"${v}" tem entradas associadas e não pode ser eliminado.`); return }
+            await supabase.from('videiras_suppliers').delete().eq('name', v)
             setSuppliers?.((p) => p.filter(s => s !== v))
             set('supplier', list.find(s => s !== v) || '')
           }}
@@ -2487,7 +2492,7 @@ export default function App() {
   const [authLoading,      setAuthLoading]      = useState(true)
   const [loading,          setLoading]          = useState(true)
   const [types,            setTypes]            = useState(INIT_TYPES)
-  const [suppliers,        setSuppliers]        = useState(() => [...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
+  const [suppliers,        setSuppliers]        = useState([])
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
   const [view,           setView]           = useState('dashboard')
@@ -2559,10 +2564,11 @@ export default function App() {
     const load = async () => {
       setLoading(true)
       try {
-        const [wRes, eRes, cRes] = await Promise.all([
+        const [wRes, eRes, cRes, sRes] = await Promise.all([
           supabase.from('videiras_wines').select('*').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
+          supabase.from('videiras_suppliers').select('name').order('name'),
         ])
         if (wRes.error) console.error('wines:', wRes.error)
         if (eRes.error) console.error('entries:', eRes.error)
@@ -2570,6 +2576,8 @@ export default function App() {
         if (wRes.data) setWines(wRes.data.map(wineFromDb))
         if (eRes.data) setEntries(eRes.data.map(entryFromDb))
         if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
+        if (sRes.data && sRes.data.length > 0) setSuppliers(sRes.data.map(r => r.name))
+        else setSuppliers([...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
       } finally {

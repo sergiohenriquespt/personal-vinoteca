@@ -1660,7 +1660,7 @@ function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) 
           value={f.supplier}
           onChange={(v) => set('supplier', v)}
           options={list}
-          onAdd={(v) => { setSuppliers?.((p) => [...p, v]); set('supplier', v) }}
+          onAdd={(v) => { setSuppliers?.((p) => [...p, v].sort((a, b) => a.localeCompare(b, 'pt'))); set('supplier', v) }}
           onRemove={(v) => {
             const hasMovements = (entries || []).some(e => e.supplier === v)
             if (hasMovements) { alert(`"${v}" tem entradas associadas e não pode ser eliminado.`); return }
@@ -2487,7 +2487,7 @@ export default function App() {
   const [authLoading,      setAuthLoading]      = useState(true)
   const [loading,          setLoading]          = useState(true)
   const [types,            setTypes]            = useState(INIT_TYPES)
-  const [suppliers,        setSuppliers]        = useState(SUPPLIERS)
+  const [suppliers,        setSuppliers]        = useState(() => [...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
   const [view,           setView]           = useState('dashboard')

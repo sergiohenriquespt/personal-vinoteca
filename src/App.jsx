@@ -1642,7 +1642,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, suppliers, setSuppliers, onSave, onClose }) {
+function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) {
   const [f, setF] = useState({ date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const list = suppliers ?? SUPPLIERS
@@ -1884,13 +1884,19 @@ function PieChart({ data, total }) {
 }
 
 // ─── FILTER SELECT WITH INLINE ADD ────────────────────────────────────────────
-function FilterSelect({ placeholder, value, onChange, options, onAdd }) {
+function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove }) {
   const [adding, setAdding] = useState(false)
   const [newVal, setNewVal] = useState('')
   const confirmAdd = () => {
     const v = newVal.trim()
     if (v && !options.includes(v)) onAdd(v)
     setNewVal(''); setAdding(false)
+  }
+  const handleRemove = () => {
+    if (!value) return
+    if (!window.confirm(`Eliminar "${value}" da lista?`)) return
+    onRemove(value)
+    onChange('')
   }
   if (adding) return (
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -1912,6 +1918,14 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd }) {
       </select>
       <button onClick={() => setAdding(true)} title={`Adicionar a ${placeholder}`}
         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: '#6a6058', cursor: 'pointer', padding: '4px 7px', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
+      {onRemove && value && (
+        <button onClick={handleRemove} title={`Eliminar "${value}"`}
+          style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', transition: 'color 0.15s, border-color 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.borderColor = 'rgba(232,112,128,0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+          <Trash2 size={11} />
+        </button>
+      )}
     </div>
   )
 }
@@ -2904,7 +2918,7 @@ export default function App() {
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} />}
-          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} onSave={addEntry} onClose={closeModal} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
         </ModalShell>
       )}

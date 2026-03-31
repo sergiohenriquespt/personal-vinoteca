@@ -2133,7 +2133,7 @@ function LoginScreen() {
 }
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
+function AdminPanel({ session }) {
   const [users,       setUsers]       = useState([])
   const [loadingU,    setLoadingU]    = useState(true)
   const [tab,         setTab]         = useState('create')
@@ -2145,7 +2145,7 @@ function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
   const [createPwd,   setCreatePwd]   = useState('')
   const [creating,    setCreating]    = useState(false)
   const [msg,         setMsg]         = useState('')
-  const [claiming,    setClaiming]    = useState(false)
+
 
   const adminFetch = async (action, method = 'GET', body = null) => {
     const { data: { session: s } } = await supabase.auth.getSession()
@@ -2196,27 +2196,8 @@ function AdminPanel({ session, onClaimData, hasUnclaimedData }) {
     loadUsers()
   }
 
-  const handleClaim = async () => {
-    setClaiming(true)
-    await onClaimData()
-    setClaiming(false)
-  }
-
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
-      {/* Claim unclaimed data banner */}
-      {hasUnclaimedData && (
-        <div style={{ ...S.stat, padding: 16, marginBottom: 20, border: '1px solid rgba(200,150,62,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 13, color: '#c8963e', fontWeight: 400 }}>Dados por associar</div>
-            <div style={{ fontSize: 12, color: '#6a5f52', marginTop: 2 }}>Existem vinhos sem utilizador associado. Clica para os reclamar para a tua conta.</div>
-          </div>
-          <button onClick={handleClaim} disabled={claiming}
-            style={{ background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '8px 16px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer', flexShrink: 0 }}>
-            {claiming ? 'A reclamar…' : 'Reclamar dados'}
-          </button>
-        </div>
-      )}
 
       {/* Create / Invite form */}
       <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
@@ -2539,10 +2520,14 @@ export default function App() {
       if (s?.user) loadProfile(s.user.id)
       setAuthLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s)
-      if (s?.user) loadProfile(s.user.id)
-      else { setProfile(null); setWines([]); setEntries([]); setConsumptions([]) }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(null); setProfile(null)
+        setWines([]); setEntries([]); setConsumptions([])
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        setSession(s)
+        if (s?.user) loadProfile(s.user.id)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -2550,6 +2535,7 @@ export default function App() {
   // ── CARREGAR DADOS DO SUPABASE ────────────────────────────────────────────
   useEffect(() => {
     if (!session) return
+    if (wines.length > 0) return  // já carregado — não recarregar no token refresh
     const load = async () => {
       setLoading(true)
       try {
@@ -2753,7 +2739,7 @@ export default function App() {
         {/* content */}
         <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 84 : 24 }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
-          {view === 'admin' && isAdmin && <AdminPanel session={session} onClaimData={async () => { const { data } = await supabase.rpc('videiras_claim_data'); if (data) { const [wRes,eRes,cRes] = await Promise.all([supabase.from('videiras_wines').select('*').order('name'),supabase.from('videiras_entries').select('*').order('date',{ascending:false}),supabase.from('videiras_consumptions').select('*').order('date',{ascending:false})]); if(wRes.data)setWines(wRes.data.map(wineFromDb)); if(eRes.data)setEntries(eRes.data.map(entryFromDb)); if(cRes.data)setConsumptions(cRes.data.map(consumptionFromDb)); alert(`Dados reclamados: ${data.wines} vinhos, ${data.consumptions} consumos`); } }} hasUnclaimedData={wines.filter(w=>!w.userId).length > 0} />}
+          {view === 'admin' && isAdmin && <AdminPanel session={session} />}
 
           {view === 'adega' && (
             <>

@@ -1830,17 +1830,17 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
                   </div>
                   {onEditEntry && (
                     <button onClick={() => onEditEntry(e)}
-                      style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                      style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
                       onMouseEnter={(ev) => { ev.currentTarget.style.color = '#c8963e'; ev.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
-                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#3a3530'; ev.currentTarget.style.background = 'none' }}>
+                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#6a5f52'; ev.currentTarget.style.background = 'none' }}>
                       <Edit2 size={13} />
                     </button>
                   )}
                   {onDeleteEntry && (
                     <button onClick={() => { if (window.confirm(`Cancelar esta entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será revertido.`)) onDeleteEntry(e) }}
-                      style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                      style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
                       onMouseEnter={(ev) => { ev.currentTarget.style.color = '#e87080'; ev.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#3a3530'; ev.currentTarget.style.background = 'none' }}>
+                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#6a5f52'; ev.currentTarget.style.background = 'none' }}>
                       <Trash2 size={13} />
                     </button>
                   )}
@@ -1861,17 +1861,17 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
                     <span style={{ fontSize: 11, color: '#9a8f82' }}>{c.date}</span>
                     {onEditConsumption && (
                       <button onClick={() => onEditConsumption(c)}
-                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                        style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#c8963e'; e.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#6a5f52'; e.currentTarget.style.background = 'none' }}>
                         <Edit2 size={13} />
                       </button>
                     )}
                     {onDeleteConsumption && (
                       <button onClick={() => { if (window.confirm(`Cancelar este consumo de ${c.quantity} ${c.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será reposto.`)) onDeleteConsumption(c) }}
-                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                        style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#6a5f52'; e.currentTarget.style.background = 'none' }}>
                         <Trash2 size={13} />
                       </button>
                     )}

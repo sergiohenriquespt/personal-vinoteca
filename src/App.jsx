@@ -2217,6 +2217,10 @@ function AdminPanel({ session }) {
   const [createPwd,   setCreatePwd]   = useState('')
   const [creating,    setCreating]    = useState(false)
   const [msg,         setMsg]         = useState('')
+  const [backingUp,    setBackingUp]    = useState(false)
+  const [importing,    setImporting]    = useState(false)
+  const [importMsg,    setImportMsg]    = useState('')
+  const [importPreview, setImportPreview] = useState(null)
 
 
   const adminFetch = async (action, method = 'GET', body = null) => {
@@ -2266,6 +2270,104 @@ function AdminPanel({ session }) {
   const toggleRole = async (u) => {
     await adminFetch('set-role', 'POST', { userId: u.id, role: u.role === 'admin' ? 'user' : 'admin' })
     loadUsers()
+  }
+
+  const handleImportFile = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result)
+        if (!data.version || !Array.isArray(data.wines)) {
+          setImportMsg('Erro: ficheiro inválido ou não é um backup Videiras.')
+          setImportPreview(null)
+          return
+        }
+        setImportPreview(data)
+        setImportMsg('')
+      } catch {
+        setImportMsg('Erro: não foi possível ler o ficheiro JSON.')
+        setImportPreview(null)
+      }
+    }
+    reader.readAsText(file)
+    // reset input so same file can be selected again
+    e.target.value = ''
+  }
+
+  const handleImport = async () => {
+    if (!importPreview) return
+    setImporting(true); setImportMsg('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const uid = user.id
+
+      // Wines — upsert by id, replace user_id with current user
+      if (importPreview.wines?.length) {
+        const wines = importPreview.wines.map(w => ({ ...w, user_id: uid }))
+        const { error } = await supabase.from('videiras_wines').upsert(wines, { onConflict: 'id' })
+        if (error) throw new Error('Vinhos: ' + error.message)
+      }
+
+      // Consumptions — upsert by id
+      if (importPreview.consumptions?.length) {
+        const cons = importPreview.consumptions.map(c => ({ ...c, user_id: uid }))
+        const { error } = await supabase.from('videiras_consumptions').upsert(cons, { onConflict: 'id' })
+        if (error) throw new Error('Consumos: ' + error.message)
+      }
+
+      // Entries — upsert by id
+      if (importPreview.entries?.length) {
+        const entries = importPreview.entries.map(e => ({ ...e, user_id: uid }))
+        const { error } = await supabase.from('videiras_entries').upsert(entries, { onConflict: 'id' })
+        if (error) throw new Error('Entradas: ' + error.message)
+      }
+
+      // Suppliers — upsert by name (ignore id)
+      if (importPreview.suppliers?.length) {
+        const sups = importPreview.suppliers.map(s => ({ name: s.name, user_id: uid }))
+        const { error } = await supabase.from('videiras_suppliers').upsert(sups, { onConflict: 'user_id,name', ignoreDuplicates: true })
+        if (error) throw new Error('Fornecedores: ' + error.message)
+      }
+
+      const total = (importPreview.wines?.length||0) + (importPreview.consumptions?.length||0) + (importPreview.entries?.length||0) + (importPreview.suppliers?.length||0)
+      setImportMsg(`✓ Importação concluída — ${total} registos processados. Faz refresh para ver as alterações.`)
+      setImportPreview(null)
+    } catch (err) {
+      setImportMsg('Erro: ' + err.message)
+    }
+    setImporting(false)
+  }
+
+  const handleBackup = async () => {
+    setBackingUp(true)
+    try {
+      const [wRes, cRes, eRes, sRes] = await Promise.all([
+        supabase.from('videiras_wines').select('*').order('name'),
+        supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
+        supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
+        supabase.from('videiras_suppliers').select('*').order('name'),
+      ])
+      const backup = {
+        version: 1,
+        exported_at: new Date().toISOString(),
+        wines:        wRes.data || [],
+        consumptions: cRes.data || [],
+        entries:      eRes.data || [],
+        suppliers:    sRes.data || [],
+      }
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `videiras-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Erro ao exportar backup: ' + err.message)
+    }
+    setBackingUp(false)
   }
 
   return (
@@ -2333,6 +2435,87 @@ function AdminPanel({ session }) {
               {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
             </button>
           </form>
+        )}
+      </div>
+
+      {/* Backup */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Download size={14} color="#c8963e" /> Cópia de segurança
+          </div>
+          <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
+            Exporta todos os dados (vinhos, consumos, entradas, fornecedores) para um ficheiro JSON.
+          </div>
+        </div>
+        <button onClick={handleBackup} disabled={backingUp} style={{
+          display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6,
+          border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)',
+          color: '#c8963e', cursor: backingUp ? 'not-allowed' : 'pointer',
+          fontFamily: FONT, fontSize: 12, fontWeight: 500, flexShrink: 0,
+          opacity: backingUp ? 0.6 : 1, transition: 'all 0.15s',
+        }}>
+          <Download size={13} /> {backingUp ? 'A exportar…' : 'Exportar backup'}
+        </button>
+      </div>
+
+      {/* Importar backup */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <FileText size={14} color="#c8963e" />
+          <span style={{ fontSize: 13, color: '#e8dece' }}>Importar backup</span>
+        </div>
+        <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.6, marginBottom: 14 }}>
+          Selecciona um ficheiro <code style={{ color: '#6a5f52', background: '#0d0b09', padding: '1px 5px', borderRadius: 3 }}>.json</code> exportado anteriormente.
+          Os dados existentes são actualizados; os novos são adicionados. Nada é eliminado.
+        </div>
+
+        {/* File picker */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 6,
+          border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#9a8f82',
+          cursor: 'pointer', fontFamily: FONT, fontSize: 12, transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)'; e.currentTarget.style.color = '#c8963e' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9a8f82' }}>
+          <FileText size={13} /> Escolher ficheiro…
+          <input type="file" accept=".json" onChange={handleImportFile} style={{ display: 'none' }} />
+        </label>
+
+        {/* Preview */}
+        {importPreview && (
+          <div style={{ marginTop: 16, padding: 14, background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(200,150,62,0.2)' }}>
+            <div style={{ fontSize: 11, color: '#c8963e', marginBottom: 10, fontWeight: 500 }}>
+              Backup de {importPreview.exported_at ? new Date(importPreview.exported_at).toLocaleString('pt-PT') : '—'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 14 }}>
+              {[
+                ['Vinhos',      importPreview.wines?.length       || 0],
+                ['Consumos',    importPreview.consumptions?.length || 0],
+                ['Entradas',    importPreview.entries?.length      || 0],
+                ['Fornecedores',importPreview.suppliers?.length    || 0],
+              ].map(([label, count]) => (
+                <div key={label} style={{ fontSize: 11, color: '#6a5f52' }}>
+                  <span style={{ color: '#e8dece', fontWeight: 500 }}>{count}</span> {label.toLowerCase()}
+                </div>
+              ))}
+            </div>
+            <button onClick={handleImport} disabled={importing}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 6,
+                border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.1)',
+                color: '#c8963e', cursor: importing ? 'not-allowed' : 'pointer',
+                fontFamily: FONT, fontSize: 12, fontWeight: 500,
+                opacity: importing ? 0.6 : 1, transition: 'all 0.15s' }}>
+              <Download size={13} style={{ transform: 'rotate(180deg)' }} />
+              {importing ? 'A importar…' : 'Confirmar importação'}
+            </button>
+          </div>
+        )}
+
+        {importMsg && (
+          <div style={{ marginTop: 12, fontSize: 12,
+            color: importMsg.startsWith('✓') ? '#68c880' : '#e87080',
+            padding: '8px 12px', borderRadius: 5,
+            background: importMsg.startsWith('✓') ? 'rgba(104,200,128,0.08)' : 'rgba(232,112,128,0.08)',
+          }}>{importMsg}</div>
         )}
       </div>
 

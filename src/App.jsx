@@ -1298,12 +1298,48 @@ function Btn({ children, onClick, variant = 'default', style = {}, disabled = fa
   return <button onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>{children}</button>
 }
 
-function WineThumb({ photo, type, size = 40 }) {
+function WineThumb({ photo, type, size = 40, onClick }) {
   const c = getTC(type)
-  if (photo) return <img src={photo} alt="" style={{ width: size, height: size * 1.5, objectFit: 'cover', borderRadius: 4, display: 'block', flexShrink: 0 }} />
+  if (photo) return (
+    <img src={photo} alt="" onClick={onClick}
+      style={{ width: size, height: size * 1.5, objectFit: 'cover', borderRadius: 4, display: 'block', flexShrink: 0,
+        cursor: onClick ? 'zoom-in' : 'default', transition: 'opacity 0.15s' }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.opacity = '0.82' }}
+      onMouseLeave={e => { if (onClick) e.currentTarget.style.opacity = '1' }}
+    />
+  )
   return (
     <div style={{ width: size, height: size * 1.5, borderRadius: 4, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <Wine size={size * 0.45} color={c.fg} style={{ opacity: 0.45 }} />
+    </div>
+  )
+}
+
+function PhotoLightbox({ src: imgSrc, onClose }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 300,
+      background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'zoom-out',
+    }}>
+      <img src={imgSrc} alt="" onClick={e => e.stopPropagation()} style={{
+        maxWidth: '90vw', maxHeight: '90vh',
+        objectFit: 'contain', borderRadius: 8,
+        boxShadow: '0 24px 80px rgba(0,0,0,0.8)',
+        cursor: 'default',
+      }} />
+      <button onClick={onClose} style={{
+        position: 'absolute', top: 20, right: 20,
+        background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%',
+        width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#e8dece', cursor: 'pointer',
+      }}><X size={16} /></button>
     </div>
   )
 }
@@ -1714,6 +1750,7 @@ function ConsumptionForm({ wine, onSave, onClose }) {
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
 function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption }) {
   const [tab, setTab] = useState('info')
+  const [lightbox, setLightbox] = useState(false)
   const wEntries  = entries.filter((e) => e.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const wConsumed = consumptions.filter((c) => c.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const tabSt = (t) => ({ padding: '8px 14px', fontSize: 13, cursor: 'pointer', border: 'none', background: 'none',
@@ -1721,9 +1758,10 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
     borderBottom: tab === t ? '2px solid #c8963e' : '2px solid transparent', transition: 'color 0.15s' })
   return (
     <>
+      {lightbox && <PhotoLightbox src={wine.photo} onClose={() => setLightbox(false)} />}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 14, flex: 1, minWidth: 0 }}>
-          <WineThumb photo={wine.photo} type={wine.type} size={44} />
+          <WineThumb photo={wine.photo} type={wine.type} size={44} onClick={wine.photo ? () => setLightbox(true) : undefined} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ marginBottom: 6 }}><Badge type={wine.type} /></div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 300, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{wine.name}</h2>
@@ -1950,12 +1988,14 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove }
 
 // ─── WINE LIST VIEW ───────────────────────────────────────────────────────────
 function WineListRow({ wine, onClick, isMobile }) {
+  const [lightbox, setLightbox] = React.useState(false)
   return (
     <div onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, padding: isMobile ? '10px 14px' : '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s', opacity: wine.quantity === 0 ? 0.45 : 1 }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-      <WineThumb photo={wine.photo} type={wine.type} size={isMobile ? 22 : 26} />
+      {lightbox && <PhotoLightbox src={wine.photo} onClose={(e) => { setLightbox(false) }} />}
+      <WineThumb photo={wine.photo} type={wine.type} size={isMobile ? 22 : 26} onClick={wine.photo ? (e) => { e.stopPropagation(); setLightbox(true) } : undefined} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 400, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wine.name}</div>
         <div style={{ fontSize: 11, color: '#9a8f82', marginTop: 1 }}>

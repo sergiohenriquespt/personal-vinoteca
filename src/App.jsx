@@ -1186,8 +1186,10 @@ const INIT_CONSUMPTIONS = [
   {id:536, wineId:582, date:'2024-01-01', quantity:1, rating:5.0, notes:''},
 ]
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const fmt    = (n) => n != null ? n.toFixed(2).replace('.', ',') + ' €' : '—'
-const fmtNum = (n) => n != null ? Number(n).toFixed(2).replace('.', ',') : ''
+const fmtN   = (n, dec = 2) => n == null ? '—' : new Intl.NumberFormat('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n)
+const fmtInt = (n) => n == null ? '—' : new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
+const fmt    = (n) => n != null ? fmtN(n) + ' €' : '—'
+const fmtNum = (n) => n != null ? fmtN(Number(n)) : ''
 const totalV = (w) => (w.purchasePrice || 0) * (w.quantity || 0)
 const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1
 
@@ -2465,9 +2467,9 @@ function StockReport({ wines, consumptions, isMobile }) {
 
         // KPI boxes
         const kpis = [
-          { label: 'REFERÊNCIAS', value: String(totalRefs) },
-          { label: 'GARRAFAS', value: String(totalBottles) },
-          { label: 'VALOR TOTAL', value: totalValue.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }) },
+          { label: 'REFERÊNCIAS', value: fmtInt(totalRefs) },
+          { label: 'GARRAFAS', value: fmtInt(totalBottles) },
+          { label: 'VALOR TOTAL', value: fmt(totalValue) },
         ]
         const kpiW = (W - margin*2 - 8) / 3
         kpis.forEach((k, i) => {
@@ -2499,9 +2501,9 @@ function StockReport({ wines, consumptions, isMobile }) {
           doc.setFontSize(7)
           doc.text(type, margin + 4, yy + 4.3)
           doc.setTextColor(150, 140, 120)
-          doc.text(`${d.refs} ref · ${d.bottles} garrafas`, margin + 45, yy + 4.3)
+          doc.text(`${fmtInt(d.refs)} ref · ${fmtInt(d.bottles)} garrafas`, margin + 45, yy + 4.3)
           doc.setTextColor(200, 150, 62)
-          doc.text(d.value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }), W - margin - 4, yy + 4.3, { align: 'right' })
+          doc.text(fmt(d.value), W - margin - 4, yy + 4.3, { align: 'right' })
           yy += 8
         })
         yy += 4
@@ -2516,10 +2518,10 @@ function StockReport({ wines, consumptions, isMobile }) {
             [w.region, w.country].filter(Boolean).join(' · '),
             w.year || '—',
             w.quantity,
-            w.purchasePrice > 0 ? w.purchasePrice.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €' : '—',
-            (w.purchasePrice * w.quantity) > 0 ? (w.purchasePrice * w.quantity).toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €' : '—',
+            w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—',
+            (w.purchasePrice * w.quantity) > 0 ? fmt(w.purchasePrice * w.quantity) : '—',
           ]),
-          foot: [['', '', '', '', totalBottles, '', totalValue.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €']],
+          foot: [['', '', '', '', fmtInt(totalBottles), '', fmt(totalValue)]],
           styles: {
             font: 'helvetica', fontSize: 7.5, cellPadding: 3,
             fillColor: [13, 11, 9], textColor: [180, 165, 145], lineColor: [35, 30, 24], lineWidth: 0.2,
@@ -2590,9 +2592,9 @@ function StockReport({ wines, consumptions, isMobile }) {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
         {[
-          { label: 'Referências', value: totalRefs, color: '#e8dece' },
-          { label: 'Garrafas', value: totalBottles, color: '#e8dece' },
-          { label: 'Valor total', value: totalValue.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }), color: '#c8963e' },
+          { label: 'Referências', value: fmtInt(totalRefs), color: '#e8dece' },
+          { label: 'Garrafas', value: fmtInt(totalBottles), color: '#e8dece' },
+          { label: 'Valor total', value: fmt(totalValue), color: '#c8963e' },
         ].map(k => (
           <div key={k.label} style={{ ...S.stat, padding: isMobile ? '14px 12px' : '16px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>{k.label}</div>
@@ -2612,9 +2614,9 @@ function StockReport({ wines, consumptions, isMobile }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 9, fontWeight: 600, color: tc.fg, background: tc.bg, padding: '2px 8px', borderRadius: 3, letterSpacing: '0.06em' }}>{type.toUpperCase()}</span>
-                  <span style={{ fontSize: 11, color: '#6a5f52' }}>{d.refs} ref · {d.bottles} gar.</span>
+                  <span style={{ fontSize: 11, color: '#6a5f52' }}>{fmtInt(d.refs)} ref · {fmtInt(d.bottles)} gar.</span>
                 </div>
-                <span style={{ fontSize: 12, color: '#c8963e' }}>{d.value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}</span>
+                <span style={{ fontSize: 12, color: '#c8963e' }}>{fmt(d.value)}</span>
               </div>
               <div style={{ height: 3, background: '#1a1814', borderRadius: 2, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: tc.fg, opacity: 0.6, borderRadius: 2, transition: 'width 0.5s ease' }} />
@@ -2652,7 +2654,7 @@ function StockReport({ wines, consumptions, isMobile }) {
             <tfoot>
               <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <td colSpan={isMobile ? 2 : 4} style={{ padding: '10px 12px', fontSize: 9, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total</td>
-                <td style={{ padding: '10px 12px', color: '#e8dece', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{totalBottles}</td>
+                <td style={{ padding: '10px 12px', color: '#e8dece', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmtInt(totalBottles)}</td>
                 {!isMobile && <td></td>}
                 <td style={{ padding: '10px 12px', color: '#c8963e', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmt(totalValue)}</td>
               </tr>
@@ -2720,10 +2722,10 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
         {[
-          { l: 'Referências em stock', v: inStock.length,      c: '#e8dece' },
-          { l: 'Garrafas em stock',    v: totalBottles,         c: '#e8dece' },
+          { l: 'Referências em stock', v: fmtInt(inStock.length),      c: '#e8dece' },
+          { l: 'Garrafas em stock',    v: fmtInt(totalBottles),         c: '#e8dece' },
           { l: 'Valor Total',          v: fmt(totalValue),      c: '#c8963e' },
-          { l: 'Consumidas',           v: totalConsumed,        c: '#9a8f82' },
+          { l: 'Consumidas',           v: fmtInt(totalConsumed),        c: '#9a8f82' },
         ].map(({ l, v, c }) => (
           <div key={l} style={{ ...S.stat, padding: '16px 18px' }}>
             <div style={{ fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
@@ -2782,7 +2784,7 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
                   {d.avgRating > 0 && (
                     <span style={{ fontSize: 11, color: '#c8963e' }}>{'★'.repeat(Math.round(d.avgRating))} {d.avgRating.toFixed(1)}</span>
                   )}
-                  <span style={{ fontSize: 12, color: '#9a8f82', minWidth: 60, textAlign: 'right' }}>{d.bottles} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
+                  <span style={{ fontSize: 12, color: '#9a8f82', minWidth: 60, textAlign: 'right' }}>{fmtInt(d.bottles)} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
                 </div>
               </div>
               <div style={{ height: 3, background: '#26221c', borderRadius: 2, overflow: 'hidden' }}>
@@ -3063,8 +3065,8 @@ export default function App() {
 
           <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ fontSize: 11, color: '#3a3530', lineHeight: 1.8, fontWeight: 300, marginBottom: 10 }}>
-              <div>{wines.length} referências</div>
-              <div>{wines.reduce((s, w) => s + w.quantity, 0)} garrafas</div>
+              <div>{fmtInt(wines.length)} referências</div>
+              <div>{fmtInt(wines.reduce((s, w) => s + w.quantity, 0))} garrafas</div>
             </div>
             <div style={{ fontSize: 11, color: '#4a453f', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email}</div>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: 0, transition: 'color 0.15s' }}

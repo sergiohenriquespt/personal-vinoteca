@@ -2372,13 +2372,21 @@ function RelatoriosPanel({ wines, consumptions, entries, isMobile }) {
 }
 
 // ─── PDF HELPERS ──────────────────────────────────────────────────────────────
-const pdfFooter = (doc, W, margin, data) => {
+const pdfFooter = (doc, W, margin) => {
+  // Footer bar + separator + centered text (page numbers added in post-pass)
   doc.setFillColor(22, 19, 16); doc.rect(0, 283, W, 14, 'F')
   doc.setDrawColor(50, 44, 38); doc.setLineWidth(0.2); doc.line(margin, 283.5, W - margin, 283.5)
   doc.setFontSize(6); doc.setTextColor(60, 52, 48)
   doc.text('Videiras · Cellar Collection · gerado em ' + new Date().toLocaleString('pt-PT'), W/2, 289.5, { align: 'center' })
-  doc.setTextColor(100, 90, 75)
-  doc.text('Pág. ' + data.pageNumber + ' / ' + data.doc.internal.getNumberOfPages(), W - margin, 289.5, { align: 'right' })
+}
+const pdfAddPageNumbers = (doc, W, margin) => {
+  // Post-pass: now all pages exist, so getNumberOfPages() is correct
+  const total = doc.internal.getNumberOfPages()
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p)
+    doc.setFontSize(6); doc.setTextColor(100, 90, 75)
+    doc.text('Pág. ' + p + ' / ' + total, W - margin, 289.5, { align: 'right' })
+  }
 }
 const pdfDrawHeader = (doc, W, margin, title) => {
   doc.setFillColor(13, 11, 9); doc.rect(0, 0, W, 297, 'F')
@@ -2469,8 +2477,9 @@ function StockReport({ wines, isMobile }) {
           body: inStock.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity,w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
           foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
           willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
-          didDrawPage: (data) => pdfFooter(doc, W, margin, data),
+          didDrawPage: () => pdfFooter(doc, W, margin),
         })
+        pdfAddPageNumbers(doc, W, margin)
         doc.save(`videiras-stock-${new Date().toISOString().slice(0,10)}.pdf`)
       }; document.head.appendChild(s2)
     }; document.head.appendChild(s1)
@@ -2619,8 +2628,9 @@ function CatalogoReport({ wines, isMobile }) {
           body: allWines.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity>0?w.quantity:'—',w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
           foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
           willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
-          didDrawPage: (data) => pdfFooter(doc, W, margin, data),
+          didDrawPage: () => pdfFooter(doc, W, margin),
         })
+        pdfAddPageNumbers(doc, W, margin)
         doc.save(`videiras-catalogo-${new Date().toISOString().slice(0,10)}.pdf`)
       }; document.head.appendChild(s2)
     }; document.head.appendChild(s1)

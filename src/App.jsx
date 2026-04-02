@@ -2340,14 +2340,14 @@ function RelatoriosPanel({ wines, consumptions, entries, isMobile }) {
   const [activeReport, setActiveReport] = React.useState('stock')
 
   const REPORTS = [
-    { id: 'stock', label: 'Stock da Adega', icon: <TrendingUp size={13} /> },
+    { id: 'stock',    label: 'Stock da Adega',        icon: <TrendingUp size={13} /> },
+    { id: 'catalogo', label: 'Catálogo Completo',      icon: <FileText size={13} /> },
   ]
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', paddingBottom: 40 }}>
       {/* Report selector */}
-      {REPORTS.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {REPORTS.map(r => (
             <button key={r.id} onClick={() => setActiveReport(r.id)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
@@ -2362,7 +2362,10 @@ function RelatoriosPanel({ wines, consumptions, entries, isMobile }) {
         </div>
       )}
 
-      {activeReport === 'stock' && <StockReport wines={wines} consumptions={consumptions} isMobile={isMobile} />}
+      </div>
+
+      {activeReport === 'stock'    && <StockReport    wines={wines} consumptions={consumptions} isMobile={isMobile} />}
+      {activeReport === 'catalogo' && <CatalogoReport wines={wines} consumptions={consumptions} isMobile={isMobile} />}
     </div>
   )
 }
@@ -2657,6 +2660,278 @@ function StockReport({ wines, consumptions, isMobile }) {
                 <td style={{ padding: '10px 12px', color: '#e8dece', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmtInt(totalBottles)}</td>
                 {!isMobile && <td></td>}
                 <td style={{ padding: '10px 12px', color: '#c8963e', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmt(totalValue)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ─── CATÁLOGO COMPLETO ────────────────────────────────────────────────────────
+function CatalogoReport({ wines, consumptions, isMobile }) {
+  const [sortCol,  setSortCol]  = React.useState('name')
+  const [sortDir,  setSortDir]  = React.useState('asc')
+  const [filterT,  setFilterT]  = React.useState('')
+
+  const allWines = [...wines].sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol]
+    if (sortCol === 'totalV') { va = a.purchasePrice * a.quantity; vb = b.purchasePrice * b.quantity }
+    if (va == null) va = sortCol === 'year' ? 0 : ''
+    if (vb == null) vb = sortCol === 'year' ? 0 : ''
+    const cmp = typeof va === 'string' ? va.localeCompare(vb, 'pt') : va - vb
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  const displayed = filterT ? allWines.filter(w => w.type === filterT) : allWines
+  const types = [...new Set(wines.map(w => w.type))].sort((a, b) => a.localeCompare(b, 'pt'))
+
+  const totalRefs     = wines.length
+  const inStockRefs   = wines.filter(w => w.quantity > 0).length
+  const totalBottles  = wines.reduce((s, w) => s + w.quantity, 0)
+  const totalValue    = wines.reduce((s, w) => s + w.purchasePrice * w.quantity, 0)
+  const consumedTotal = consumptions.reduce((s, c) => s + c.quantity, 0)
+
+  const Th = ({ id, label, align = 'left' }) => {
+    const active = sortCol === id
+    return (
+      <th onClick={() => { if (active) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCol(id); setSortDir('asc') } }}
+        style={{ padding: '10px 12px', textAlign: align, fontSize: 9, color: active ? '#c8963e' : '#9a8f82',
+          textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, whiteSpace: 'nowrap',
+          cursor: 'pointer', userSelect: 'none', transition: 'color 0.15s' }}>
+        {label} {active ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+      </th>
+    )
+  }
+
+  // Export XLS
+  const exportXLS = () => {
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    script.onload = () => {
+      const XLSX = window.XLSX
+      const rows = [
+        ['Catálogo Completo — ' + new Date().toLocaleDateString('pt-PT')],
+        [],
+        ['Nome', 'Tipo', 'País', 'Região', 'Ano', 'Qtd em Stock', 'Preço Unit. (€)', 'Valor Stock (€)', 'Rating Pessoal', 'Rating Vivino'],
+        ...displayed.map(w => [
+          w.name, w.type, w.country, w.region || '', w.year || '',
+          w.quantity,
+          Number(w.purchasePrice.toFixed(2)),
+          Number((w.purchasePrice * w.quantity).toFixed(2)),
+          w.personalRating || '',
+          w.vivinoRating || '',
+        ]),
+        [],
+        ['TOTAL', '', '', '', '', totalBottles, '', Number(totalValue.toFixed(2)), '', ''],
+      ]
+      const ws = XLSX.utils.aoa_to_sheet(rows)
+      ws['!cols'] = [{ wch: 42 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 13 }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Catálogo')
+      XLSX.writeFile(wb, `videiras-catalogo-${new Date().toISOString().slice(0,10)}.xlsx`)
+    }
+    document.head.appendChild(script)
+  }
+
+  // Export PDF
+  const exportPDF = () => {
+    const s1 = document.createElement('script')
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+    s1.onload = () => {
+      const s2 = document.createElement('script')
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
+      s2.onload = () => {
+        const { jsPDF } = window.jspdf
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+        const W = 297, H = 210, margin = 18
+
+        // Background
+        doc.setFillColor(13, 11, 9); doc.rect(0, 0, W, H, 'F')
+
+        // Header
+        doc.setFillColor(22, 19, 16); doc.roundedRect(margin, 12, W - margin*2, 28, 3, 3, 'F')
+        doc.setFillColor(40, 30, 10); doc.setDrawColor(200, 150, 62); doc.setLineWidth(0.4)
+        doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(14); doc.setTextColor(232, 222, 206); doc.setCharSpace(2)
+        doc.text('VIDEIRAS', margin + 24, 23.5)
+        doc.setFontSize(6.5); doc.setTextColor(90, 80, 65); doc.setCharSpace(1)
+        doc.text('CELLAR COLLECTION', margin + 24, 28); doc.setCharSpace(0)
+        doc.setFontSize(7.5); doc.setTextColor(200, 150, 62)
+        doc.text('CATÁLOGO COMPLETO', W - margin - 6, 22, { align: 'right' })
+        doc.setFontSize(7); doc.setTextColor(90, 80, 65)
+        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin - 6, 28, { align: 'right' })
+
+        // Divider
+        doc.setDrawColor(200, 150, 62); doc.setLineWidth(0.3); doc.setLineDashPattern([1, 1], 0)
+        doc.line(margin, 44, W - margin, 44); doc.setLineDashPattern([], 0)
+
+        // KPIs
+        const kpis = [
+          { label: 'REFERÊNCIAS TOTAL', value: fmtInt(totalRefs) },
+          { label: 'EM STOCK', value: fmtInt(inStockRefs) },
+          { label: 'GARRAFAS EM STOCK', value: fmtInt(totalBottles) },
+          { label: 'VALOR EM ADEGA', value: fmt(totalValue) },
+          { label: 'GARRAFAS CONSUMIDAS', value: fmtInt(consumedTotal) },
+        ]
+        const kpiW = (W - margin*2 - 16) / 5
+        kpis.forEach((k, i) => {
+          const x = margin + i * (kpiW + 4)
+          doc.setFillColor(22, 19, 16); doc.setDrawColor(50, 44, 38); doc.setLineWidth(0.3)
+          doc.roundedRect(x, 48, kpiW, 18, 2, 2, 'FD')
+          doc.setFontSize(5.5); doc.setTextColor(100, 90, 75)
+          doc.text(k.label, x + kpiW/2, 54, { align: 'center' })
+          doc.setFontSize(10); doc.setTextColor(232, 222, 206); doc.setFont('helvetica', 'bold')
+          doc.text(k.value, x + kpiW/2, 61, { align: 'center' })
+          doc.setFont('helvetica', 'normal')
+        })
+
+        // Table
+        doc.autoTable({
+          startY: 72,
+          head: [['Nome', 'Tipo', 'País / Região', 'Ano', 'Stock', 'Preço', 'Valor Stock', 'Rating']],
+          body: displayed.map(w => [
+            w.name,
+            w.type,
+            [w.region, w.country].filter(Boolean).join(' · '),
+            w.year || '—',
+            w.quantity > 0 ? fmtInt(w.quantity) : '—',
+            w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—',
+            w.purchasePrice * w.quantity > 0 ? fmt(w.purchasePrice * w.quantity) : '—',
+            w.personalRating > 0 ? '★'.repeat(Math.round(w.personalRating)) + ` (${fmtN(w.personalRating, 1)})` : (w.vivinoRating ? `V ${fmtN(w.vivinoRating, 1)}` : '—'),
+          ]),
+          foot: [['', '', '', '', fmtInt(totalBottles), '', fmt(totalValue), '']],
+          styles: {
+            font: 'helvetica', fontSize: 7, cellPadding: 2.5,
+            fillColor: [13, 11, 9], textColor: [180, 165, 145], lineColor: [35, 30, 24], lineWidth: 0.2,
+          },
+          headStyles: { fillColor: [22, 19, 16], textColor: [200, 150, 62], fontSize: 6, fontStyle: 'bold', halign: 'left', cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 } },
+          footStyles: { fillColor: [22, 19, 16], textColor: [200, 150, 62], fontStyle: 'bold', fontSize: 7 },
+          alternateRowStyles: { fillColor: [18, 15, 12] },
+          columnStyles: {
+            0: { cellWidth: 68 }, 1: { cellWidth: 16 }, 2: { cellWidth: 44 },
+            3: { cellWidth: 12, halign: 'center' }, 4: { cellWidth: 14, halign: 'center' },
+            5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 24, halign: 'right' },
+            7: { cellWidth: 30, halign: 'center' },
+          },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            doc.setFillColor(13, 11, 9); doc.rect(0, H - 12, W, 12, 'F')
+            doc.setFontSize(6); doc.setTextColor(50, 44, 38)
+            doc.text(`Videiras · Cellar Collection · gerado em ${new Date().toLocaleString('pt-PT')}`, W/2, H - 5, { align: 'center' })
+            doc.setTextColor(60, 52, 42)
+            doc.text(`${data.pageNumber}`, W - margin, H - 5, { align: 'right' })
+          },
+        })
+        doc.save(`videiras-catalogo-${new Date().toISOString().slice(0,10)}.pdf`)
+      }
+      document.head.appendChild(s2)
+    }
+    document.head.appendChild(s1)
+  }
+
+  return (
+    <div>
+      {/* Header + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 400, color: '#e8dece' }}>Catálogo Completo</div>
+          <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Filter by type */}
+          <select value={filterT} onChange={e => setFilterT(e.target.value)}
+            style={{ ...S.inp, width: 'auto', fontSize: 12, cursor: 'pointer', height: 32, padding: '0 10px' }}>
+            <option value="">Todos os tipos</option>
+            {types.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <button onClick={exportXLS} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#6a9f6a', cursor: 'pointer', fontFamily: FONT, fontSize: 11, transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(106,159,106,0.1)'; e.currentTarget.style.borderColor = 'rgba(106,159,106,0.3)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}>
+            <Download size={12} /> XLS
+          </button>
+          <button onClick={exportPDF} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#c8963e', cursor: 'pointer', fontFamily: FONT, fontSize: 11, transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,150,62,0.1)'; e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}>
+            <Download size={12} /> PDF
+          </button>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(5,1fr)', gap: 10, marginBottom: 20 }}>
+        {[
+          { label: 'Referências',     value: fmtInt(totalRefs),    color: '#e8dece' },
+          { label: 'Em stock',        value: fmtInt(inStockRefs),  color: '#68c880' },
+          { label: 'Garrafas stock',  value: fmtInt(totalBottles), color: '#e8dece' },
+          { label: 'Valor adega',     value: fmt(totalValue),      color: '#c8963e' },
+          { label: 'Consumidas',      value: fmtInt(consumedTotal),color: '#9a8f82' },
+        ].map(k => (
+          <div key={k.label} style={{ ...S.stat, padding: '14px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 300, color: k.color, fontFamily: FONT }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabela ordenável */}
+      <div style={{ ...S.stat, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <Th id="name"    label="Nome" />
+                <Th id="type"    label="Tipo" />
+                {!isMobile && <Th id="country" label="País / Região" />}
+                {!isMobile && <Th id="year"    label="Ano"   align="center" />}
+                <Th id="quantity" label="Stock" align="right" />
+                {!isMobile && <Th id="purchasePrice" label="Preço" align="right" />}
+                <Th id="totalV"  label="Valor"  align="right" />
+                {!isMobile && <Th id="personalRating" label="Rating" align="center" />}
+              </tr>
+            </thead>
+            <tbody>
+              {displayed.map((w, i) => (
+                <tr key={w.id} style={{
+                  borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  background: i % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                  opacity: w.quantity === 0 ? 0.5 : 1,
+                }}>
+                  <td style={{ padding: '8px 12px', color: '#e8dece', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</td>
+                  <td style={{ padding: '8px 12px' }}><Badge type={w.type} /></td>
+                  {!isMobile && <td style={{ padding: '8px 12px', color: '#6a5f52', fontSize: 11 }}>{[w.region, w.country].filter(Boolean).join(' · ')}</td>}
+                  {!isMobile && <td style={{ padding: '8px 12px', color: '#6a5f52', textAlign: 'center' }}>{w.year || '—'}</td>}
+                  <td style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>
+                    <span style={{ color: w.quantity > 0 ? '#68c880' : '#e87080', fontWeight: w.quantity > 0 ? 500 : 400 }}>
+                      {w.quantity > 0 ? fmtInt(w.quantity) : '—'}
+                    </span>
+                  </td>
+                  {!isMobile && <td style={{ padding: '8px 12px', color: '#6a5f52', textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>{w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—'}</td>}
+                  <td style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'DM Mono, monospace', color: w.purchasePrice * w.quantity > 0 ? '#c8963e' : '#3a3530' }}>
+                    {w.purchasePrice * w.quantity > 0 ? fmt(w.purchasePrice * w.quantity) : '—'}
+                  </td>
+                  {!isMobile && (
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      {w.personalRating > 0
+                        ? <Stars value={w.personalRating} size={10} />
+                        : w.vivinoRating ? <span style={{ fontSize: 10, color: '#6a5f52' }}>V {fmtN(w.vivinoRating, 1)}</span>
+                        : <span style={{ color: '#2a2520' }}>—</span>}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <td colSpan={isMobile ? 2 : 4} style={{ padding: '10px 12px', fontSize: 9, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {filterT ? `${fmtInt(displayed.length)} referências (${filterT})` : `${fmtInt(displayed.length)} referências`}
+                </td>
+                <td style={{ padding: '10px 12px', color: '#e8dece', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmtInt(totalBottles)}</td>
+                {!isMobile && <td></td>}
+                <td style={{ padding: '10px 12px', color: '#c8963e', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmt(totalValue)}</td>
+                {!isMobile && <td></td>}
               </tr>
             </tfoot>
           </table>

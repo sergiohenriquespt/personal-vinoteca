@@ -2711,6 +2711,7 @@ function CatalogoReport({ wines, isMobile }) {
 
 
 
+  return (
     <div>
       {/* Header + export buttons */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>

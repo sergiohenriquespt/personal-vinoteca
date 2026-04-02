@@ -2428,56 +2428,36 @@ function StockReport({ wines, consumptions, isMobile }) {
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
         const W = 210, margin = 18
 
-        // Background
+        // Background page 1
         doc.setFillColor(13, 11, 9)
         doc.rect(0, 0, W, 297, 'F')
 
-        // Header bar
-        doc.setFillColor(22, 19, 16)
-        doc.roundedRect(margin, 12, W - margin*2, 28, 3, 3, 'F')
-
-        // Logo box + wine glass icon
-        doc.setFillColor(40, 30, 10)
-        doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
-        // Draw wine glass shape
-        doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.6)
-        // Bowl (trapezoid): top wide, narrows down
-        const lx = margin + 9, ly = 17.5
-        doc.lines([[3,0],[1.5,4],[-4.5,0],[-1.5,-4]], lx - 1.5, ly, [1,1], 'S')
-        // Stem
-        doc.line(lx + 0.75, ly + 4, lx + 0.75, ly + 7)
-        // Base
-        doc.line(lx - 1.5, ly + 7, lx + 3, ly + 7)
-
-        // App name
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(14)
+        // Header — just text
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
         doc.setTextColor(232, 222, 206)
         doc.setCharSpace(2)
-        doc.text('VIDEIRAS', margin + 24, 23.5)
-        doc.setFontSize(6.5)
-        doc.setTextColor(90, 80, 65)
-        doc.setCharSpace(1)
-        doc.text('CELLAR COLLECTION', margin + 24, 28)
-        doc.setCharSpace(0)
-
-        // Report title & date
-        doc.setFontSize(7.5)
-        doc.setTextColor(200, 150, 62)
-        doc.text('RELATÓRIO DE STOCK', W - margin - 6, 22, { align: 'right' })
+        doc.text('VIDEIRAS', margin, 22)
+        doc.setFont('helvetica', 'normal')
         doc.setFontSize(7)
         doc.setTextColor(90, 80, 65)
-        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin - 6, 28, { align: 'right' })
+        doc.setCharSpace(1)
+        doc.text('CELLAR COLLECTION', margin, 27)
+        doc.setCharSpace(0)
 
-        // Divider line (gold gradient simulation)
+        // Report title right-aligned
+        doc.setFontSize(7.5)
+        doc.setTextColor(200, 150, 62)
+        doc.text('RELATÓRIO DE STOCK', W - margin, 22, { align: 'right' })
+        doc.setFontSize(7)
+        doc.setTextColor(90, 80, 65)
+        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin, 27, { align: 'right' })
+
+        // Thin gold line separator
         doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.3)
-        doc.setLineDashPattern([1, 1], 0)
-        doc.line(margin, 44, W - margin, 44)
-        doc.setLineDashPattern([], 0)
+        doc.setLineWidth(0.2)
+        doc.line(margin, 31, W - margin, 31)
+
 
         // KPI boxes
         const kpis = [
@@ -2491,19 +2471,19 @@ function StockReport({ wines, consumptions, isMobile }) {
           doc.setFillColor(22, 19, 16)
           doc.setDrawColor(50, 44, 38)
           doc.setLineWidth(0.3)
-          doc.roundedRect(x, 48, kpiW, 18, 2, 2, 'FD')
+          doc.roundedRect(x, 36, kpiW, 16, 2, 2, 'FD')
           doc.setFontSize(6)
           doc.setTextColor(100, 90, 75)
-          doc.text(k.label, x + kpiW/2, 54, { align: 'center' })
-          doc.setFontSize(11)
+          doc.text(k.label, x + kpiW/2, 41.5, { align: 'center' })
+          doc.setFontSize(10)
           doc.setTextColor(232, 222, 206)
           doc.setFont('helvetica', 'bold')
-          doc.text(k.value, x + kpiW/2, 61, { align: 'center' })
+          doc.text(k.value, x + kpiW/2, 47.5, { align: 'center' })
           doc.setFont('helvetica', 'normal')
         })
 
         // Summary by type
-        let yy = 72
+        let yy = 57
         doc.setFontSize(6.5)
         doc.setTextColor(200, 150, 62)
         doc.text('POR TIPO', margin, yy)
@@ -2746,47 +2726,35 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
         const W = 210, margin = 18
 
+        // Background page 1
         doc.setFillColor(13, 11, 9)
         doc.rect(0, 0, W, 297, 'F')
 
-        doc.setFillColor(22, 19, 16)
-        doc.roundedRect(margin, 12, W - margin*2, 28, 3, 3, 'F')
-
-        doc.setFillColor(40, 30, 10)
-        doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
-        // Draw wine glass shape
-        doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.6)
-        const lx = margin + 9, ly = 17.5
-        doc.lines([[3,0],[1.5,4],[-4.5,0],[-1.5,-4]], lx - 1.5, ly, [1,1], 'S')
-        doc.line(lx + 0.75, ly + 4, lx + 0.75, ly + 7)
-        doc.line(lx - 1.5, ly + 7, lx + 3, ly + 7)
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(14)
+        // Header — just text
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
         doc.setTextColor(232, 222, 206)
         doc.setCharSpace(2)
-        doc.text('VIDEIRAS', margin + 24, 23.5)
-        doc.setFontSize(6.5)
-        doc.setTextColor(90, 80, 65)
-        doc.setCharSpace(1)
-        doc.text('CELLAR COLLECTION', margin + 24, 28)
-        doc.setCharSpace(0)
-
-        doc.setFontSize(7.5)
-        doc.setTextColor(200, 150, 62)
-        doc.text('CATÁLOGO COMPLETO', W - margin - 6, 22, { align: 'right' })
+        doc.text('VIDEIRAS', margin, 22)
+        doc.setFont('helvetica', 'normal')
         doc.setFontSize(7)
         doc.setTextColor(90, 80, 65)
-        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin - 6, 28, { align: 'right' })
+        doc.setCharSpace(1)
+        doc.text('CELLAR COLLECTION', margin, 27)
+        doc.setCharSpace(0)
 
+        // Report title right-aligned
+        doc.setFontSize(7.5)
+        doc.setTextColor(200, 150, 62)
+        doc.text('CATÁLOGO COMPLETO', W - margin, 22, { align: 'right' })
+        doc.setFontSize(7)
+        doc.setTextColor(90, 80, 65)
+        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin, 27, { align: 'right' })
+
+        // Thin gold line separator
         doc.setDrawColor(200, 150, 62)
-        doc.setLineWidth(0.3)
-        doc.setLineDashPattern([1, 1], 0)
-        doc.line(margin, 44, W - margin, 44)
-        doc.setLineDashPattern([], 0)
+        doc.setLineWidth(0.2)
+        doc.line(margin, 31, W - margin, 31)
 
         const kpis = [
           { label: 'REFERÊNCIAS', value: pdfInt(totalRefs) },
@@ -2799,18 +2767,18 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
           doc.setFillColor(22, 19, 16)
           doc.setDrawColor(50, 44, 38)
           doc.setLineWidth(0.3)
-          doc.roundedRect(x, 48, kpiW, 18, 2, 2, 'FD')
+          doc.roundedRect(x, 36, kpiW, 16, 2, 2, 'FD')
           doc.setFontSize(6)
           doc.setTextColor(100, 90, 75)
-          doc.text(k.label, x + kpiW/2, 54, { align: 'center' })
-          doc.setFontSize(11)
+          doc.text(k.label, x + kpiW/2, 41.5, { align: 'center' })
+          doc.setFontSize(10)
           doc.setTextColor(232, 222, 206)
           doc.setFont('helvetica', 'bold')
-          doc.text(k.value, x + kpiW/2, 61, { align: 'center' })
+          doc.text(k.value, x + kpiW/2, 47.5, { align: 'center' })
           doc.setFont('helvetica', 'normal')
         })
 
-        let yy = 72
+        let yy = 57
         doc.setFontSize(6.5)
         doc.setTextColor(200, 150, 62)
         doc.text('POR TIPO', margin, yy)

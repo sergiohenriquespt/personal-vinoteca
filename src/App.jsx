@@ -2436,11 +2436,21 @@ function StockReport({ wines, consumptions, isMobile }) {
         doc.setFillColor(22, 19, 16)
         doc.roundedRect(margin, 12, W - margin*2, 28, 3, 3, 'F')
 
-        // Logo circle
+        // Logo box + wine glass icon
         doc.setFillColor(40, 30, 10)
         doc.setDrawColor(200, 150, 62)
         doc.setLineWidth(0.4)
         doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
+        // Draw wine glass shape
+        doc.setDrawColor(200, 150, 62)
+        doc.setLineWidth(0.6)
+        // Bowl (trapezoid): top wide, narrows down
+        const lx = margin + 9, ly = 17.5
+        doc.lines([[3,0],[1.5,4],[-4.5,0],[-1.5,-4]], lx - 1.5, ly, [1,1], 'S')
+        // Stem
+        doc.line(lx + 0.75, ly + 4, lx + 0.75, ly + 7)
+        // Base
+        doc.line(lx - 1.5, ly + 7, lx + 3, ly + 7)
 
         // App name
         doc.setFont('helvetica', 'normal')
@@ -2544,15 +2554,23 @@ function StockReport({ wines, consumptions, isMobile }) {
             5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 22, halign: 'right' },
           },
           margin: { left: margin, right: margin },
-          didDrawPage: (data) => {
-            // Footer on each page
+          willDrawPage: () => {
+            // Fundo escuro em todas as páginas
             doc.setFillColor(13, 11, 9)
-            doc.rect(0, 285, W, 12, 'F')
+            doc.rect(0, 0, W, 297, 'F')
+          },
+          didDrawPage: (data) => {
+            // Rodapé em todas as páginas
+            doc.setFillColor(22, 19, 16)
+            doc.rect(0, 283, W, 14, 'F')
+            doc.setDrawColor(50, 44, 38)
+            doc.setLineWidth(0.2)
+            doc.line(margin, 283.5, W - margin, 283.5)
             doc.setFontSize(6)
-            doc.setTextColor(50, 44, 38)
-            doc.text(`Videiras · Cellar Collection · gerado em ${new Date().toLocaleString('pt-PT')}`, W/2, 291, { align: 'center' })
-            doc.setTextColor(60, 52, 42)
-            doc.text(`${data.pageNumber}`, W - margin, 291, { align: 'right' })
+            doc.setTextColor(60, 52, 48)
+            doc.text('Videiras · Cellar Collection · gerado em ' + new Date().toLocaleString('pt-PT'), W/2, 289.5, { align: 'center' })
+            doc.setTextColor(100, 90, 75)
+            doc.text('Pág. ' + data.pageNumber + ' / ' + data.doc.internal.getNumberOfPages(), W - margin, 289.5, { align: 'right' })
           },
         })
 
@@ -2738,6 +2756,13 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
         doc.setDrawColor(200, 150, 62)
         doc.setLineWidth(0.4)
         doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
+        // Draw wine glass shape
+        doc.setDrawColor(200, 150, 62)
+        doc.setLineWidth(0.6)
+        const lx = margin + 9, ly = 17.5
+        doc.lines([[3,0],[1.5,4],[-4.5,0],[-1.5,-4]], lx - 1.5, ly, [1,1], 'S')
+        doc.line(lx + 0.75, ly + 4, lx + 0.75, ly + 7)
+        doc.line(lx - 1.5, ly + 7, lx + 3, ly + 7)
 
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(14)
@@ -2833,14 +2858,23 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
             5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 22, halign: 'right' },
           },
           margin: { left: margin, right: margin },
-          didDrawPage: (data) => {
+          willDrawPage: () => {
+            // Fundo escuro em todas as páginas
             doc.setFillColor(13, 11, 9)
-            doc.rect(0, 285, W, 12, 'F')
+            doc.rect(0, 0, W, 297, 'F')
+          },
+          didDrawPage: (data) => {
+            // Rodapé em todas as páginas
+            doc.setFillColor(22, 19, 16)
+            doc.rect(0, 283, W, 14, 'F')
+            doc.setDrawColor(50, 44, 38)
+            doc.setLineWidth(0.2)
+            doc.line(margin, 283.5, W - margin, 283.5)
             doc.setFontSize(6)
-            doc.setTextColor(50, 44, 38)
-            doc.text(`Videiras · Cellar Collection · gerado em ${new Date().toLocaleString('pt-PT')}`, W/2, 291, { align: 'center' })
-            doc.setTextColor(60, 52, 42)
-            doc.text(`${data.pageNumber}`, W - margin, 291, { align: 'right' })
+            doc.setTextColor(60, 52, 48)
+            doc.text('Videiras · Cellar Collection · gerado em ' + new Date().toLocaleString('pt-PT'), W/2, 289.5, { align: 'center' })
+            doc.setTextColor(100, 90, 75)
+            doc.text('Pág. ' + data.pageNumber + ' / ' + data.doc.internal.getNumberOfPages(), W - margin, 289.5, { align: 'right' })
           },
         })
         doc.save(`videiras-catalogo-${new Date().toISOString().slice(0,10)}.pdf`)

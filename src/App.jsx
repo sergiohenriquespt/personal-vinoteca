@@ -1190,6 +1190,10 @@ const fmtN   = (n, dec = 2) => n == null ? '—' : new Intl.NumberFormat('fr-FR'
 const fmtInt = (n) => n == null ? '—' : new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
 const fmt    = (n) => n != null ? fmtN(n) + ' €' : '—'
 const fmtNum = (n) => n != null ? fmtN(Number(n)) : ''
+// PDF-safe: jsPDF não suporta U+00A0 (espaço não-separável do fr-FR) — substituir por espaço normal
+const pdfN   = (n, dec = 2) => fmtN(n, dec).replace(/ /g, ' ')
+const pdfInt = (n) => fmtInt(n).replace(/ /g, ' ')
+const pdfFmt = (n) => fmt(n).replace(/ /g, ' ')
 const totalV = (w) => (w.purchasePrice || 0) * (w.quantity || 0)
 const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1
 
@@ -2467,9 +2471,9 @@ function StockReport({ wines, consumptions, isMobile }) {
 
         // KPI boxes
         const kpis = [
-          { label: 'REFERÊNCIAS', value: fmtInt(totalRefs) },
-          { label: 'GARRAFAS', value: fmtInt(totalBottles) },
-          { label: 'VALOR TOTAL', value: fmt(totalValue) },
+          { label: 'REFERÊNCIAS', value: pdfInt(totalRefs) },
+          { label: 'GARRAFAS', value: pdfInt(totalBottles) },
+          { label: 'VALOR TOTAL', value: pdfFmt(totalValue) },
         ]
         const kpiW = (W - margin*2 - 8) / 3
         kpis.forEach((k, i) => {
@@ -2501,9 +2505,9 @@ function StockReport({ wines, consumptions, isMobile }) {
           doc.setFontSize(7)
           doc.text(type, margin + 4, yy + 4.3)
           doc.setTextColor(150, 140, 120)
-          doc.text(`${fmtInt(d.refs)} ref · ${fmtInt(d.bottles)} garrafas`, margin + 45, yy + 4.3)
+          doc.text(`${pdfInt(d.refs)} ref · ${pdfInt(d.bottles)} garrafas`, margin + 45, yy + 4.3)
           doc.setTextColor(200, 150, 62)
-          doc.text(fmt(d.value), W - margin - 4, yy + 4.3, { align: 'right' })
+          doc.text(pdfFmt(d.value), W - margin - 4, yy + 4.3, { align: 'right' })
           yy += 8
         })
         yy += 4
@@ -2518,10 +2522,10 @@ function StockReport({ wines, consumptions, isMobile }) {
             [w.region, w.country].filter(Boolean).join(' · '),
             w.year || '—',
             w.quantity,
-            w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—',
-            (w.purchasePrice * w.quantity) > 0 ? fmt(w.purchasePrice * w.quantity) : '—',
+            w.purchasePrice > 0 ? pdfFmt(w.purchasePrice) : '—',
+            (w.purchasePrice * w.quantity) > 0 ? pdfFmt(w.purchasePrice * w.quantity) : '—',
           ]),
-          foot: [['', '', '', '', fmtInt(totalBottles), '', fmt(totalValue)]],
+          foot: [['', '', '', '', pdfInt(totalBottles), '', pdfFmt(totalValue)]],
           styles: {
             font: 'helvetica', fontSize: 7.5, cellPadding: 3,
             fillColor: [13, 11, 9], textColor: [180, 165, 145], lineColor: [35, 30, 24], lineWidth: 0.2,
@@ -2767,11 +2771,11 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
 
         // KPIs
         const kpis = [
-          { label: 'REFERÊNCIAS TOTAL', value: fmtInt(totalRefs) },
-          { label: 'EM STOCK', value: fmtInt(inStockRefs) },
-          { label: 'GARRAFAS EM STOCK', value: fmtInt(totalBottles) },
-          { label: 'VALOR EM ADEGA', value: fmt(totalValue) },
-          { label: 'GARRAFAS CONSUMIDAS', value: fmtInt(consumedTotal) },
+          { label: 'REFERÊNCIAS TOTAL', value: pdfInt(totalRefs) },
+          { label: 'EM STOCK', value: pdfInt(inStockRefs) },
+          { label: 'GARRAFAS EM STOCK', value: pdfInt(totalBottles) },
+          { label: 'VALOR EM ADEGA', value: pdfFmt(totalValue) },
+          { label: 'GARRAFAS CONSUMIDAS', value: pdfInt(consumedTotal) },
         ]
         const kpiW = (W - margin*2 - 16) / 5
         kpis.forEach((k, i) => {
@@ -2794,12 +2798,12 @@ function CatalogoReport({ wines, consumptions, isMobile }) {
             w.type,
             [w.region, w.country].filter(Boolean).join(' · '),
             w.year || '—',
-            w.quantity > 0 ? fmtInt(w.quantity) : '—',
-            w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—',
-            w.purchasePrice * w.quantity > 0 ? fmt(w.purchasePrice * w.quantity) : '—',
-            w.personalRating > 0 ? '★'.repeat(Math.round(w.personalRating)) + ` (${fmtN(w.personalRating, 1)})` : (w.vivinoRating ? `V ${fmtN(w.vivinoRating, 1)}` : '—'),
+            w.quantity > 0 ? pdfInt(w.quantity) : '—',
+            w.purchasePrice > 0 ? pdfFmt(w.purchasePrice) : '—',
+            w.purchasePrice * w.quantity > 0 ? pdfFmt(w.purchasePrice * w.quantity) : '—',
+            w.personalRating > 0 ? `${Math.round(w.personalRating)}/5 (${pdfN(w.personalRating, 1)})` : (w.vivinoRating ? `V ${pdfN(w.vivinoRating, 1)}` : '—'),
           ]),
-          foot: [['', '', '', '', fmtInt(totalBottles), '', fmt(totalValue), '']],
+          foot: [['', '', '', '', pdfInt(totalBottles), '', pdfFmt(totalValue), '']],
           styles: {
             font: 'helvetica', fontSize: 7, cellPadding: 2.5,
             fillColor: [13, 11, 9], textColor: [180, 165, 145], lineColor: [35, 30, 24], lineWidth: 0.2,

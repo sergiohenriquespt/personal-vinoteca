@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import {
   Wine, Plus, Search, BarChart3, LogIn, LogOut,
   Edit2, Trash2, X, Menu, Sparkles, Check,
   LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
   ShieldCheck, Users, UserCheck, UserX, Settings, KeyRound,
+  FileText, Download, FileSpreadsheet, TrendingUp,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -2331,6 +2332,338 @@ function AdminPanel({ session }) {
   )
 }
 
+
+// ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
+function RelatoriosPanel({ wines, consumptions, entries, isMobile }) {
+  const [activeReport, setActiveReport] = React.useState('stock')
+
+  const REPORTS = [
+    { id: 'stock', label: 'Stock da Adega', icon: <TrendingUp size={13} /> },
+  ]
+
+  return (
+    <div style={{ maxWidth: 960, margin: '0 auto', paddingBottom: 40 }}>
+      {/* Report selector */}
+      {REPORTS.length > 1 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+          {REPORTS.map(r => (
+            <button key={r.id} onClick={() => setActiveReport(r.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+              borderRadius: 6, border: `1px solid ${activeReport === r.id ? 'rgba(200,150,62,0.4)' : 'rgba(255,255,255,0.07)'}`,
+              background: activeReport === r.id ? 'rgba(200,150,62,0.1)' : 'transparent',
+              color: activeReport === r.id ? '#c8963e' : '#4a453f', cursor: 'pointer',
+              fontFamily: FONT, fontSize: 12, transition: 'all 0.15s',
+            }}>
+              {r.icon} {r.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeReport === 'stock' && <StockReport wines={wines} consumptions={consumptions} isMobile={isMobile} />}
+    </div>
+  )
+}
+
+// ─── STOCK REPORT ─────────────────────────────────────────────────────────────
+function StockReport({ wines, consumptions, isMobile }) {
+  const inStock = wines.filter(w => w.quantity > 0).sort((a, b) => a.name.localeCompare(b.name, 'pt'))
+  const totalBottles = inStock.reduce((s, w) => s + w.quantity, 0)
+  const totalValue   = inStock.reduce((s, w) => s + w.purchasePrice * w.quantity, 0)
+  const totalRefs    = inStock.length
+
+  // Group by type for summary
+  const byType = inStock.reduce((acc, w) => {
+    if (!acc[w.type]) acc[w.type] = { bottles: 0, value: 0, refs: 0 }
+    acc[w.type].bottles += w.quantity
+    acc[w.type].value   += w.purchasePrice * w.quantity
+    acc[w.type].refs++
+    return acc
+  }, {})
+
+  // Export XLS
+  const exportXLS = () => {
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    script.onload = () => {
+      const XLSX = window.XLSX
+      const rows = [
+        ['Stock da Adega — ' + new Date().toLocaleDateString('pt-PT')],
+        [],
+        ['Nome', 'Tipo', 'País', 'Região', 'Ano', 'Qtd', 'Preço Unit. (€)', 'Valor Total (€)'],
+        ...inStock.map(w => [
+          w.name, w.type, w.country, w.region, w.year || '—',
+          w.quantity,
+          Number(w.purchasePrice.toFixed(2)),
+          Number((w.purchasePrice * w.quantity).toFixed(2))
+        ]),
+        [],
+        ['TOTAL', '', '', '', '', totalBottles, '', Number(totalValue.toFixed(2))],
+      ]
+      const ws = XLSX.utils.aoa_to_sheet(rows)
+      ws['!cols'] = [{ wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 6 }, { wch: 6 }, { wch: 16 }, { wch: 16 }]
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Stock')
+      XLSX.writeFile(wb, `videiras-stock-${new Date().toISOString().slice(0,10)}.xlsx`)
+    }
+    document.head.appendChild(script)
+  }
+
+  // Export PDF
+  const exportPDF = () => {
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+    script.onload = () => {
+      const script2 = document.createElement('script')
+      script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
+      script2.onload = () => {
+        const { jsPDF } = window.jspdf
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+        const W = 210, margin = 18
+
+        // Background
+        doc.setFillColor(13, 11, 9)
+        doc.rect(0, 0, W, 297, 'F')
+
+        // Header bar
+        doc.setFillColor(22, 19, 16)
+        doc.roundedRect(margin, 12, W - margin*2, 28, 3, 3, 'F')
+
+        // Logo circle
+        doc.setFillColor(40, 30, 10)
+        doc.setDrawColor(200, 150, 62)
+        doc.setLineWidth(0.4)
+        doc.roundedRect(margin + 6, 16, 12, 12, 2, 2, 'FD')
+
+        // App name
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(14)
+        doc.setTextColor(232, 222, 206)
+        doc.setCharSpace(2)
+        doc.text('VIDEIRAS', margin + 24, 23.5)
+        doc.setFontSize(6.5)
+        doc.setTextColor(90, 80, 65)
+        doc.setCharSpace(1)
+        doc.text('CELLAR COLLECTION', margin + 24, 28)
+        doc.setCharSpace(0)
+
+        // Report title & date
+        doc.setFontSize(7.5)
+        doc.setTextColor(200, 150, 62)
+        doc.text('RELATÓRIO DE STOCK', W - margin - 6, 22, { align: 'right' })
+        doc.setFontSize(7)
+        doc.setTextColor(90, 80, 65)
+        doc.text(new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }), W - margin - 6, 28, { align: 'right' })
+
+        // Divider line (gold gradient simulation)
+        doc.setDrawColor(200, 150, 62)
+        doc.setLineWidth(0.3)
+        doc.setLineDashPattern([1, 1], 0)
+        doc.line(margin, 44, W - margin, 44)
+        doc.setLineDashPattern([], 0)
+
+        // KPI boxes
+        const kpis = [
+          { label: 'REFERÊNCIAS', value: String(totalRefs) },
+          { label: 'GARRAFAS', value: String(totalBottles) },
+          { label: 'VALOR TOTAL', value: totalValue.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }) },
+        ]
+        const kpiW = (W - margin*2 - 8) / 3
+        kpis.forEach((k, i) => {
+          const x = margin + i * (kpiW + 4)
+          doc.setFillColor(22, 19, 16)
+          doc.setDrawColor(50, 44, 38)
+          doc.setLineWidth(0.3)
+          doc.roundedRect(x, 48, kpiW, 18, 2, 2, 'FD')
+          doc.setFontSize(6)
+          doc.setTextColor(100, 90, 75)
+          doc.text(k.label, x + kpiW/2, 54, { align: 'center' })
+          doc.setFontSize(11)
+          doc.setTextColor(232, 222, 206)
+          doc.setFont('helvetica', 'bold')
+          doc.text(k.value, x + kpiW/2, 61, { align: 'center' })
+          doc.setFont('helvetica', 'normal')
+        })
+
+        // Summary by type
+        let yy = 72
+        doc.setFontSize(6.5)
+        doc.setTextColor(200, 150, 62)
+        doc.text('POR TIPO', margin, yy)
+        yy += 4
+        Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).forEach(([type, d]) => {
+          doc.setFillColor(22, 19, 16)
+          doc.roundedRect(margin, yy, W - margin*2, 6.5, 1, 1, 'F')
+          doc.setTextColor(200, 180, 150)
+          doc.setFontSize(7)
+          doc.text(type, margin + 4, yy + 4.3)
+          doc.setTextColor(150, 140, 120)
+          doc.text(`${d.refs} ref · ${d.bottles} garrafas`, margin + 45, yy + 4.3)
+          doc.setTextColor(200, 150, 62)
+          doc.text(d.value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }), W - margin - 4, yy + 4.3, { align: 'right' })
+          yy += 8
+        })
+        yy += 4
+
+        // Table
+        doc.autoTable({
+          startY: yy,
+          head: [['Nome', 'Tipo', 'País / Região', 'Ano', 'Qtd', 'Preço', 'Total']],
+          body: inStock.map(w => [
+            w.name,
+            w.type,
+            [w.region, w.country].filter(Boolean).join(' · '),
+            w.year || '—',
+            w.quantity,
+            w.purchasePrice > 0 ? w.purchasePrice.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €' : '—',
+            (w.purchasePrice * w.quantity) > 0 ? (w.purchasePrice * w.quantity).toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €' : '—',
+          ]),
+          foot: [['', '', '', '', totalBottles, '', totalValue.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) + ' €']],
+          styles: {
+            font: 'helvetica', fontSize: 7.5, cellPadding: 3,
+            fillColor: [13, 11, 9], textColor: [180, 165, 145], lineColor: [35, 30, 24], lineWidth: 0.2,
+          },
+          headStyles: {
+            fillColor: [22, 19, 16], textColor: [200, 150, 62], fontSize: 6.5,
+            fontStyle: 'bold', halign: 'left', cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+          },
+          footStyles: {
+            fillColor: [22, 19, 16], textColor: [200, 150, 62], fontStyle: 'bold', fontSize: 7.5,
+          },
+          alternateRowStyles: { fillColor: [18, 15, 12] },
+          columnStyles: {
+            0: { cellWidth: 52 }, 1: { cellWidth: 18 }, 2: { cellWidth: 36 },
+            3: { cellWidth: 12, halign: 'center' }, 4: { cellWidth: 10, halign: 'center' },
+            5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 22, halign: 'right' },
+          },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            // Footer on each page
+            doc.setFillColor(13, 11, 9)
+            doc.rect(0, 285, W, 12, 'F')
+            doc.setFontSize(6)
+            doc.setTextColor(50, 44, 38)
+            doc.text(`Videiras · Cellar Collection · gerado em ${new Date().toLocaleString('pt-PT')}`, W/2, 291, { align: 'center' })
+            doc.setTextColor(60, 52, 42)
+            doc.text(`${data.pageNumber}`, W - margin, 291, { align: 'right' })
+          },
+        })
+
+        doc.save(`videiras-stock-${new Date().toISOString().slice(0,10)}.pdf`)
+      }
+      document.head.appendChild(script2)
+    }
+    document.head.appendChild(script)
+  }
+
+  return (
+    <div>
+      {/* Header + export buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 400, color: '#e8dece' }}>Stock da Adega</div>
+          <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={exportXLS} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#6a9f6a',
+            cursor: 'pointer', fontFamily: FONT, fontSize: 11, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(106,159,106,0.1)'; e.currentTarget.style.borderColor = 'rgba(106,159,106,0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}>
+            <Download size={12} /> XLS
+          </button>
+          <button onClick={exportPDF} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#c8963e',
+            cursor: 'pointer', fontFamily: FONT, fontSize: 11, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,150,62,0.1)'; e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}>
+            <Download size={12} /> PDF
+          </button>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+        {[
+          { label: 'Referências', value: totalRefs, color: '#e8dece' },
+          { label: 'Garrafas', value: totalBottles, color: '#e8dece' },
+          { label: 'Valor total', value: totalValue.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }), color: '#c8963e' },
+        ].map(k => (
+          <div key={k.label} style={{ ...S.stat, padding: isMobile ? '14px 12px' : '16px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 300, color: k.color, fontFamily: FONT }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Por tipo — barras */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 9, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 14 }}>Por tipo</div>
+        {Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).map(([type, d]) => {
+          const pct = Math.round((d.bottles / totalBottles) * 100)
+          const tc = TYPE_COLORS[type] || { fg: '#9a8f82', bg: '#1a1814' }
+          return (
+            <div key={type} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: tc.fg, background: tc.bg, padding: '2px 8px', borderRadius: 3, letterSpacing: '0.06em' }}>{type.toUpperCase()}</span>
+                  <span style={{ fontSize: 11, color: '#6a5f52' }}>{d.refs} ref · {d.bottles} gar.</span>
+                </div>
+                <span style={{ fontSize: 12, color: '#c8963e' }}>{d.value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}</span>
+              </div>
+              <div style={{ height: 3, background: '#1a1814', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: tc.fg, opacity: 0.6, borderRadius: 2, transition: 'width 0.5s ease' }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Tabela */}
+      <div style={{ ...S.stat, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {['Nome', 'Tipo', !isMobile && 'País / Região', !isMobile && 'Ano', 'Qtd', !isMobile && 'Preço', 'Total'].filter(Boolean).map(h => (
+                  <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Qtd' || h === 'Preço' || h === 'Total' ? 'right' : 'left',
+                    fontSize: 9, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {inStock.map((w, i) => (
+                <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: i % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                  <td style={{ padding: '9px 12px', color: '#e8dece', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</td>
+                  <td style={{ padding: '9px 12px' }}><Badge type={w.type} /></td>
+                  {!isMobile && <td style={{ padding: '9px 12px', color: '#6a5f52', fontSize: 11 }}>{[w.region, w.country].filter(Boolean).join(' · ')}</td>}
+                  {!isMobile && <td style={{ padding: '9px 12px', color: '#6a5f52', textAlign: 'center' }}>{w.year || '—'}</td>}
+                  <td style={{ padding: '9px 12px', color: '#e8dece', textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>{w.quantity}</td>
+                  {!isMobile && <td style={{ padding: '9px 12px', color: '#6a5f52', textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>{w.purchasePrice > 0 ? fmt(w.purchasePrice) : '—'}</td>}
+                  <td style={{ padding: '9px 12px', color: '#c8963e', textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>{(w.purchasePrice * w.quantity) > 0 ? fmt(w.purchasePrice * w.quantity) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <td colSpan={isMobile ? 2 : 4} style={{ padding: '10px 12px', fontSize: 9, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total</td>
+                <td style={{ padding: '10px 12px', color: '#e8dece', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{totalBottles}</td>
+                {!isMobile && <td></td>}
+                <td style={{ padding: '10px 12px', color: '#c8963e', textAlign: 'right', fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{fmt(totalValue)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ wines, entries, consumptions, isMobile }) {
   const inStock       = wines.filter(w => w.quantity > 0)
@@ -2667,6 +3000,7 @@ export default function App() {
     { id: 'adega',     icon: <Wine size={15} />,      label: 'Adega' },
     { id: 'entradas',  icon: <LogIn size={15} />,     label: 'Entradas' },
     { id: 'consumos',  icon: <LogOut size={15} />,    label: 'Consumos' },
+    { id: 'relatorios', icon: <FileText size={15} />, label: 'Relatórios' },
     ...(isAdmin ? [{ id: 'admin', icon: <ShieldCheck size={15} />, label: 'Admin' }] : []),
   ]
 
@@ -2757,7 +3091,7 @@ export default function App() {
             </div>
           )}
           <h1 style={{ margin: 0, fontSize: 12, fontWeight: 400, color: '#6a6058', fontFamily: FONT, letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
-            {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos' }[view]}
+            {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos', relatorios: 'Relatórios', admin: 'Admin' }[view]}
           </h1>
           {view === 'adega' && (
             <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>
@@ -2765,8 +3099,9 @@ export default function App() {
         </div>
 
         {/* content */}
-        <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 84 : 24 }}>
+        <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 72 : 24 }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
+          {view === 'relatorios' && <RelatoriosPanel wines={wines} consumptions={consumptions} entries={entries} isMobile={isMobile} />}
           {view === 'admin' && isAdmin && <AdminPanel session={session} />}
 
           {view === 'adega' && (
@@ -2897,29 +3232,27 @@ export default function App() {
 
       {/* BOTTOM NAV (mobile) */}
       {isMobile && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 58, background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', zIndex: 20 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', zIndex: 20 }}>
           {NAV.map((n) => {
             const active = view === n.id
             return (
               <button key={n.id} onClick={() => setView(n.id)} style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
                 background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s',
-                color: active ? '#c8963e' : '#3a3530', fontFamily: FONT,
-                padding: '6px 2px',
+                color: active ? '#c8963e' : '#3a3530', fontFamily: FONT, padding: '4px 1px', minWidth: 0,
               }}>
-                {/* icon wrapper — highlight active */}
                 <div style={{
-                  padding: '3px 12px', borderRadius: 12,
+                  padding: active ? '2px 8px' : '2px 4px', borderRadius: 10,
                   background: active ? 'rgba(200,150,62,0.12)' : 'transparent',
-                  transition: 'background 0.15s',
+                  transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {n.icon}
+                  {React.cloneElement(n.icon, { size: 14 })}
                 </div>
-                <span style={{
-                  fontSize: 8, letterSpacing: '0.04em', textTransform: 'uppercase',
-                  fontWeight: active ? 600 : 300,
-                  opacity: active ? 1 : 0.6,
-                }}>{n.label}</span>
+                {active && (
+                  <span style={{ fontSize: 7.5, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 600, lineHeight: 1 }}>
+                    {n.label}
+                  </span>
+                )}
               </button>
             )
           })}

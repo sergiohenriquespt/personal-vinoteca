@@ -2359,9 +2359,6 @@ function RelatoriosPanel({ wines, consumptions, entries, isMobile }) {
               {r.icon} {r.label}
             </button>
           ))}
-        </div>
-      )}
-
       </div>
 
       {activeReport === 'stock'    && <StockReport    wines={wines} consumptions={consumptions} isMobile={isMobile} />}

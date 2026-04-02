@@ -1685,13 +1685,15 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) {
-  const [f, setF] = useState({ date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
+function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose }) {
+  const [f, setF] = useState(entry
+    ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price) }
+    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const list = suppliers ?? SUPPLIERS
   return (
     <>
-      <ModalHeader title="Registar Entrada" subtitle={`${wine.name} · ${wine.year}`} onClose={onClose} />
+      <ModalHeader title={entry ? "Editar Entrada" : "Registar Entrada"} subtitle={`${wine.name} · ${wine.year}`} onClose={onClose} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
         <div><label style={S.lbl}>Quantidade</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
@@ -1720,15 +1722,17 @@ function EntryForm({ wine, suppliers, setSuppliers, entries, onSave, onClose }) 
       <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0,00" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="gold" onClick={() => { if (f.quantity >= 1) onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 }) }}><LogIn size={14} />Registar Entrada</Btn>
+        <Btn variant="gold" onClick={() => { if (f.quantity >= 1) onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 }) }}><LogIn size={14} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
       </div>
     </>
   )
 }
 
 // ─── CONSUMPTION FORM ─────────────────────────────────────────────────────────
-function ConsumptionForm({ wine, onSave, onClose }) {
-  const [f, setF] = useState({ date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '' })
+function ConsumptionForm({ wine, consumption, onSave, onClose }) {
+  const [f, setF] = useState(consumption
+    ? { date: consumption.date, quantity: consumption.quantity, rating: consumption.rating || 0, notes: consumption.notes || '' }
+    : { date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '' })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   return (
     <>
@@ -1748,7 +1752,7 @@ function ConsumptionForm({ wine, onSave, onClose }) {
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption }) {
   const [tab, setTab] = useState('info')
   const [lightbox, setLightbox] = useState(false)
   const wEntries  = entries.filter((e) => e.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -1824,6 +1828,14 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
                     <div style={{ fontSize: 13, color: '#c8963e' }}>{fmt(e.price)}/un</div>
                     <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price * e.quantity)} total</div>
                   </div>
+                  {onEditEntry && (
+                    <button onClick={() => onEditEntry(e)}
+                      style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                      onMouseEnter={(ev) => { ev.currentTarget.style.color = '#c8963e'; ev.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
+                      onMouseLeave={(ev) => { ev.currentTarget.style.color = '#3a3530'; ev.currentTarget.style.background = 'none' }}>
+                      <Edit2 size={13} />
+                    </button>
+                  )}
                   {onDeleteEntry && (
                     <button onClick={() => { if (window.confirm(`Cancelar esta entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será revertido.`)) onDeleteEntry(e) }}
                       style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
@@ -1847,6 +1859,14 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Stars value={c.rating} size={12} />
                     <span style={{ fontSize: 11, color: '#9a8f82' }}>{c.date}</span>
+                    {onEditConsumption && (
+                      <button onClick={() => onEditConsumption(c)}
+                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#c8963e'; e.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                        <Edit2 size={13} />
+                      </button>
+                    )}
                     {onDeleteConsumption && (
                       <button onClick={() => { if (window.confirm(`Cancelar este consumo de ${c.quantity} ${c.quantity === 1 ? 'garrafa' : 'garrafas'}? O stock será reposto.`)) onDeleteConsumption(c) }}
                         style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
@@ -3117,6 +3137,8 @@ export default function App() {
   const [isMobile,       setIsMobile]       = useState(false)
   const [modal,          setModal]          = useState(null)
   const [activeWine,     setActiveWine]     = useState(null)
+  const [activeEntry,    setActiveEntry]    = useState(null)
+  const [activeCons,     setActiveCons]     = useState(null)
   const [searchEntradas, setSearchEntradas] = useState('')
   const [searchConsumos, setSearchConsumos] = useState('')
   const [showNoStock,    setShowNoStock]    = useState(() => {
@@ -3199,7 +3221,7 @@ export default function App() {
     load()
   }, [session])
 
-  const closeModal = () => { setModal(null); setActiveWine(null) }
+  const closeModal = () => { setModal(null); setActiveWine(null); setActiveEntry(null); setActiveCons(null) }
 
   const addWine = async (d) => {
     const { data } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
@@ -3260,6 +3282,33 @@ export default function App() {
     const { data } = await supabase.from('videiras_wines').update({ quantity: newQty }).eq('id', consumption.wineId).select().single()
     setConsumptions((p) => p.filter((c) => c.id !== consumption.id))
     if (data) setWines((p) => p.map((w) => w.id !== consumption.wineId ? w : wineFromDb(data)))
+  }
+
+  const editEntry = async (originalEntry, d) => {
+    const wine = wines.find(w => w.id === originalEntry.wineId)
+    const qtyDiff = d.quantity - originalEntry.quantity
+    const newQty  = (wine?.quantity || 0) + qtyDiff
+    const [eRes, wRes] = await Promise.all([
+      supabase.from('videiras_entries').update(entryToDb({ ...d, wineId: originalEntry.wineId })).eq('id', originalEntry.id).select().single(),
+      supabase.from('videiras_wines').update({ quantity: newQty, purchase_price: d.price || wine?.purchasePrice || 0 }).eq('id', originalEntry.wineId).select().single(),
+    ])
+    if (eRes.data) setEntries(p => p.map(e => e.id === originalEntry.id ? entryFromDb(eRes.data) : e))
+    if (wRes.data) setWines(p => p.map(w => w.id !== originalEntry.wineId ? w : wineFromDb(wRes.data)))
+    closeModal()
+  }
+
+  const editConsumption = async (originalCons, d) => {
+    const wine = wines.find(w => w.id === originalCons.wineId)
+    const qtyDiff = originalCons.quantity - d.quantity
+    const newQty  = (wine?.quantity || 0) + qtyDiff
+    const updates = { quantity: newQty, ...(d.rating ? { personal_rating: d.rating } : {}) }
+    const [cRes, wRes] = await Promise.all([
+      supabase.from('videiras_consumptions').update(consumptionToDb({ ...d, wineId: originalCons.wineId })).eq('id', originalCons.id).select().single(),
+      supabase.from('videiras_wines').update(updates).eq('id', originalCons.wineId).select().single(),
+    ])
+    if (cRes.data) setConsumptions(p => p.map(c => c.id === originalCons.id ? consumptionFromDb(cRes.data) : c))
+    if (wRes.data) setWines(p => p.map(w => w.id !== originalCons.wineId ? w : wineFromDb(wRes.data)))
+    closeModal()
   }
 
   const filtered = useMemo(() => wines.filter((w) => {
@@ -3543,9 +3592,11 @@ export default function App() {
         <ModalShell onClose={closeModal} isMobile={isMobile}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
+          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
+          {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} />}
         </ModalShell>
       )}
     </div>

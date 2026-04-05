@@ -3500,13 +3500,22 @@ export default function App() {
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#68c880' }}>+{e.quantity} gar.</div>
                         <div style={{ fontSize: 11, color: '#9a8f82' }}>{fmt(e.price)}/un</div>
                       </div>
-                      <button onClick={() => { if (window.confirm(`Cancelar entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'} de "${w?.name}"? O stock será revertido.`)) deleteEntry(e) }}
-                        title="Cancelar entrada"
-                        style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
-                        onMouseEnter={(e2) => { e2.currentTarget.style.color = '#e87080'; e2.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                        onMouseLeave={(e2) => { e2.currentTarget.style.color = '#3a3530'; e2.currentTarget.style.background = 'none' }}>
-                        <Trash2 size={13} />
-                      </button>
+                      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                        <button onClick={() => { if (w) { setActiveWine(w); setActiveEntry(e); setModal('editEntry') } }}
+                          title="Editar entrada"
+                          style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                          onMouseEnter={(e2) => { e2.currentTarget.style.color = '#c8963e'; e2.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
+                          onMouseLeave={(e2) => { e2.currentTarget.style.color = '#6a5f52'; e2.currentTarget.style.background = 'none' }}>
+                          <Edit2 size={13} />
+                        </button>
+                        <button onClick={() => { if (window.confirm(`Cancelar entrada de ${e.quantity} ${e.quantity === 1 ? 'garrafa' : 'garrafas'} de "${w?.name}"? O stock será revertido.`)) deleteEntry(e) }}
+                          title="Cancelar entrada"
+                          style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                          onMouseEnter={(e2) => { e2.currentTarget.style.color = '#e87080'; e2.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                          onMouseLeave={(e2) => { e2.currentTarget.style.color = '#6a5f52'; e2.currentTarget.style.background = 'none' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   )
                 })
@@ -3539,13 +3548,20 @@ export default function App() {
                         <div style={{ fontSize: 11, color: '#9a8f82', marginBottom: c.notes ? 4 : 0 }}>{c.date} · {c.quantity} {c.quantity === 1 ? 'garrafa' : 'garrafas'}</div>
                         {c.notes && <div style={{ fontSize: 12, color: '#7a6f62', fontStyle: 'italic' }}>{c.notes}</div>}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <Stars value={c.rating} size={12} />
+                        <button onClick={() => { if (w) { setActiveWine(w); setActiveCons(c); setModal('editCons') } }}
+                          title="Editar consumo"
+                          style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#c8963e'; e.currentTarget.style.background = 'rgba(200,150,62,0.1)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#6a5f52'; e.currentTarget.style.background = 'none' }}>
+                          <Edit2 size={13} />
+                        </button>
                         <button onClick={() => { if (window.confirm(`Cancelar consumo de ${c.quantity} ${c.quantity === 1 ? 'garrafa' : 'garrafas'} de "${w?.name}"? O stock será reposto.`)) deleteConsumption(c) }}
                           title="Cancelar consumo"
-                          style={{ background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
+                          style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '4px 6px', flexShrink: 0, display: 'flex', borderRadius: 5, transition: 'color 0.15s, background 0.15s' }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#6a5f52'; e.currentTarget.style.background = 'none' }}>
                           <Trash2 size={13} />
                         </button>
                       </div>

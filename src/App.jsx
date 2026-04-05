@@ -1734,18 +1734,20 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
     ? { date: consumption.date, quantity: consumption.quantity, rating: consumption.rating || 0, notes: consumption.notes || '' }
     : { date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '' })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  // When editing, the original quantity is already deducted from stock — add it back for the max
+  const maxQty = consumption ? wine.quantity + consumption.quantity : wine.quantity
   return (
     <>
-      <ModalHeader title="Registar Consumo" subtitle={`${wine.name} · ${wine.year} · ${wine.quantity} restantes`} onClose={onClose} />
+      <ModalHeader title={consumption ? "Editar Consumo" : "Registar Consumo"} subtitle={`${wine.name} · ${wine.year} · ${maxQty} disponíveis`} onClose={onClose} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
-        <div><label style={S.lbl}>Quantidade (máx. {wine.quantity})</label><input style={S.inp} type="number" min={1} max={wine.quantity} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
+        <div><label style={S.lbl}>Quantidade (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
       <div style={S.field}><label style={S.lbl}>Classificação Pessoal</label><div style={{ padding: '8px 0' }}><Stars value={f.rating} onChange={(v) => set('rating', v)} size={22} /></div></div>
       <div style={S.field}><label style={S.lbl}>Observações</label><textarea style={{ ...S.inp, minHeight: 72, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Ocasião, maridagem, notas de prova…" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="gold" onClick={() => { if (f.quantity >= 1 && f.quantity <= wine.quantity) onSave({ ...f, quantity: parseInt(f.quantity) }) }}><LogOut size={14} />Registar Consumo</Btn>
+        <Btn variant="gold" onClick={() => { if (f.quantity >= 1 && f.quantity <= maxQty) onSave({ ...f, quantity: parseInt(f.quantity) }) }}><LogOut size={14} />{consumption ? 'Guardar' : 'Registar Consumo'}</Btn>
       </div>
     </>
   )

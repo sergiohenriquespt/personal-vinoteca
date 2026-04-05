@@ -3350,6 +3350,7 @@ export default function App() {
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
+          supabase.from('videiras_quotes').select('id,quote,author,category').eq('active', true),
         ])
         if (wRes.error) console.error('wines:', wRes.error)
         if (eRes.error) console.error('entries:', eRes.error)
@@ -3359,6 +3360,7 @@ export default function App() {
         if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
         if (sRes.data && sRes.data.length > 0) setSuppliers(sRes.data.map(r => r.name))
         else setSuppliers([...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
+        if (qRes.data) setQuotes(qRes.data)
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
       } finally {

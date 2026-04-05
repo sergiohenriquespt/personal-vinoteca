@@ -3423,8 +3423,8 @@ export default function App() {
     if (cRes.data) setConsumptions((p) => [...p, consumptionFromDb(cRes.data)])
     if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
     closeModal()
-    const wine = wines.find(w => w.id === activeWine.id)
-    showRandomQuote(wine?.type?.toLowerCase() === 'tinto' ? 'tinto' : wine?.type?.toLowerCase() === 'branco' ? 'branco' : wine?.type?.toLowerCase() === 'rosé' ? 'rosé' : wine?.type?.toLowerCase() === 'espumante' ? 'espumante' : 'consumo')
+    const wineType = wine?.type?.toLowerCase()
+    showRandomQuote(['tinto','branco','rosé','espumante'].includes(wineType) ? wineType : 'consumo')
   }
 
   const deleteEntry = async (entry) => {

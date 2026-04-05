@@ -1344,6 +1344,47 @@ function PhotoLightbox({ src: imgSrc, onClose }) {
   )
 }
 
+function QuoteOverlay({ quote, onClose }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+  if (!quote) return null
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24, cursor: 'pointer',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        maxWidth: 480, width: '100%', background: '#161310',
+        border: '1px solid rgba(200,150,62,0.25)', borderRadius: 16,
+        padding: '40px 36px', textAlign: 'center', cursor: 'default',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ fontSize: 28, color: 'rgba(200,150,62,0.3)', fontFamily: 'Georgia, serif', lineHeight: 1, marginBottom: 16 }}>"</div>
+        <p style={{ fontSize: 16, fontWeight: 300, color: '#e8dece', fontFamily: FONT, lineHeight: 1.65, margin: '0 0 20px', letterSpacing: '0.01em' }}>
+          {quote.quote}
+        </p>
+        {quote.author && (
+          <p style={{ fontSize: 12, color: '#6a5f52', fontStyle: 'italic', margin: '0 0 28px' }}>— {quote.author}</p>
+        )}
+        <button onClick={onClose} style={{
+          padding: '9px 28px', borderRadius: 7, border: '1px solid rgba(200,150,62,0.3)',
+          background: 'rgba(200,150,62,0.08)', color: '#c8963e', cursor: 'pointer',
+          fontFamily: FONT, fontSize: 12, fontWeight: 500, transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(200,150,62,0.16)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(200,150,62,0.08)' }}>
+          Continuar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ModalShell({ onClose, children, isMobile }) {
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -2240,6 +2281,11 @@ function AdminPanel({ session }) {
   const [creating,    setCreating]    = useState(false)
   const [msg,         setMsg]         = useState('')
   const [backingUp,    setBackingUp]    = useState(false)
+  const [quotes,       setQuotes]       = useState([])
+  const [quotesLoaded, setQuotesLoaded] = useState(false)
+  const [qTab,         setQTab]         = useState('list')
+  const [newQuote,     setNewQuote]     = useState({ quote: '', author: '', category: 'geral' })
+  const [savingQ,      setSavingQ]      = useState(false)
   const [importing,    setImporting]    = useState(false)
   const [importMsg,    setImportMsg]    = useState('')
   const [importPreview, setImportPreview] = useState(null)
@@ -2273,7 +2319,31 @@ function AdminPanel({ session }) {
     setLoadingU(false)
   }
 
-  useEffect(() => { loadUsers() }, [])
+  useEffect(() => { loadUsers(); loadQuotes() }, [])
+
+  const loadQuotes = async () => {
+    const { data } = await supabase.from('videiras_quotes').select('*').order('created_at', { ascending: false })
+    if (data) { setQuotes(data); setQuotesLoaded(true) }
+  }
+
+  const saveQuote = async () => {
+    if (!newQuote.quote.trim()) return
+    setSavingQ(true)
+    const { data } = await supabase.from('videiras_quotes').insert({ ...newQuote, active: true }).select().single()
+    if (data) { setQuotes(p => [data, ...p]); setNewQuote({ quote: '', author: '', category: 'geral' }) }
+    setSavingQ(false)
+  }
+
+  const toggleQuote = async (q) => {
+    await supabase.from('videiras_quotes').update({ active: !q.active }).eq('id', q.id)
+    setQuotes(p => p.map(x => x.id === q.id ? { ...x, active: !x.active } : x))
+  }
+
+  const deleteQuote = async (q) => {
+    if (!window.confirm('Eliminar esta frase?')) return
+    await supabase.from('videiras_quotes').delete().eq('id', q.id)
+    setQuotes(p => p.filter(x => x.id !== q.id))
+  }
 
   const handleInvite = async (e) => {
     e.preventDefault()
@@ -2538,6 +2608,79 @@ function AdminPanel({ session }) {
             padding: '8px 12px', borderRadius: 5,
             background: importMsg.startsWith('✓') ? 'rgba(104,200,128,0.08)' : 'rgba(232,112,128,0.08)',
           }}>{importMsg}</div>
+        )}
+      </div>
+
+      {/* Frases */}
+      <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h3 style={{ margin: 0, fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+            Frases · {quotes.filter(q => q.active).length} activas
+          </h3>
+          <div style={{ display: 'flex', gap: 1, background: '#0d0b09', borderRadius: 6, padding: 2, border: '1px solid rgba(255,255,255,0.06)' }}>
+            {[['list','Lista'],['add','Nova frase']].map(([t,l]) => (
+              <button key={t} onClick={() => setQTab(t)} style={{
+                padding: '5px 12px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                fontFamily: FONT, fontSize: 11,
+                background: qTab === t ? 'rgba(200,150,62,0.12)' : 'transparent',
+                color: qTab === t ? '#c8963e' : '#4a453f', transition: 'all 0.15s',
+              }}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+        {qTab === 'add' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <textarea value={newQuote.quote} onChange={e => setNewQuote(p => ({...p, quote: e.target.value}))}
+              placeholder="Escreve a frase aqui…"
+              style={{ ...S.inp, minHeight: 80, resize: 'vertical', fontSize: 13 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <input value={newQuote.author} onChange={e => setNewQuote(p => ({...p, author: e.target.value}))}
+                placeholder="Autor (opcional)" style={{ ...S.inp, fontSize: 12 }} />
+              <select value={newQuote.category} onChange={e => setNewQuote(p => ({...p, category: e.target.value}))}
+                style={{ ...S.inp, fontSize: 12, cursor: 'pointer' }}>
+                {['geral','consumo','entrada','tinto','branco','rosé','espumante'].map(c => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Btn variant="gold" onClick={saveQuote} disabled={savingQ || !newQuote.quote.trim()}>
+                {savingQ ? 'A guardar…' : 'Guardar frase'}
+              </Btn>
+            </div>
+          </div>
+        )}
+
+        {qTab === 'list' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+            {!quotesLoaded && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>A carregar…</p>}
+            {quotesLoaded && quotes.length === 0 && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>Nenhuma frase ainda.</p>}
+            {quotes.map(q => (
+              <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 7, background: q.active ? 'rgba(255,255,255,0.02)' : 'transparent', border: '1px solid rgba(255,255,255,0.04)', opacity: q.active ? 1 : 0.45 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: '0 0 3px', fontSize: 12, color: '#e8dece', lineHeight: 1.5 }}>"{q.quote}"</p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {q.author && <span style={{ fontSize: 11, color: '#6a5f52', fontStyle: 'italic' }}>— {q.author}</span>}
+                    <span style={{ fontSize: 10, color: '#4a453f', background: '#0d0b09', padding: '1px 6px', borderRadius: 3 }}>{q.category}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => toggleQuote(q)} title={q.active ? 'Desactivar' : 'Activar'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4,
+                      color: q.active ? '#68c880' : '#4a453f', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                    {q.active ? '●' : '○'}
+                  </button>
+                  <button onClick={() => deleteQuote(q)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4, color: '#3a3530', transition: 'all 0.15s', display: 'flex' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -3141,6 +3284,8 @@ export default function App() {
   const [activeWine,     setActiveWine]     = useState(null)
   const [activeEntry,    setActiveEntry]    = useState(null)
   const [activeCons,     setActiveCons]     = useState(null)
+  const [quotes,         setQuotes]         = useState([])
+  const [activeQuote,    setActiveQuote]    = useState(null)
   const [searchEntradas, setSearchEntradas] = useState('')
   const [searchConsumos, setSearchConsumos] = useState('')
   const [showNoStock,    setShowNoStock]    = useState(() => {
@@ -3200,7 +3345,7 @@ export default function App() {
     const load = async () => {
       setLoading(true)
       try {
-        const [wRes, eRes, cRes, sRes] = await Promise.all([
+        const [wRes, eRes, cRes, sRes, qRes] = await Promise.all([
           supabase.from('videiras_wines').select('*').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
@@ -3224,6 +3369,17 @@ export default function App() {
   }, [session])
 
   const closeModal = () => { setModal(null); setActiveWine(null); setActiveEntry(null); setActiveCons(null) }
+
+  const showRandomQuote = (context) => {
+    if (!quotes.length) return
+    // Try to match category: type of wine or action (consumo/entrada)
+    const candidates = quotes.filter(q =>
+      q.category === context ||
+      q.category === 'geral'
+    )
+    const pool = candidates.length ? candidates : quotes
+    setActiveQuote(pool[Math.floor(Math.random() * pool.length)])
+  }
 
   const addWine = async (d) => {
     const { data } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
@@ -3253,6 +3409,7 @@ export default function App() {
     if (eRes.data) setEntries((p) => [...p, entryFromDb(eRes.data)])
     if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
     closeModal()
+    showRandomQuote('entrada')
   }
 
   const addConsumption = async (d) => {
@@ -3266,6 +3423,8 @@ export default function App() {
     if (cRes.data) setConsumptions((p) => [...p, consumptionFromDb(cRes.data)])
     if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
     closeModal()
+    const wine = wines.find(w => w.id === activeWine.id)
+    showRandomQuote(wine?.type?.toLowerCase() === 'tinto' ? 'tinto' : wine?.type?.toLowerCase() === 'branco' ? 'branco' : wine?.type?.toLowerCase() === 'rosé' ? 'rosé' : wine?.type?.toLowerCase() === 'espumante' ? 'espumante' : 'consumo')
   }
 
   const deleteEntry = async (entry) => {
@@ -3604,6 +3763,8 @@ export default function App() {
           })}
         </div>
       )}
+
+      {activeQuote && <QuoteOverlay quote={activeQuote} onClose={() => setActiveQuote(null)} />}
 
       {/* MODALS */}
       {modal && (

@@ -5,7 +5,7 @@ import {
   Edit2, Trash2, X, Menu, Sparkles, Check,
   LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
   ShieldCheck, Users, UserCheck, UserX, Settings, KeyRound,
-  FileText, Download, FileSpreadsheet, TrendingUp,
+  FileText, Download, FileSpreadsheet, TrendingUp, Share2, Send,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -19,7 +19,8 @@ const ANTHROPIC_API_KEY = ''
 const SUPA_URL = 'https://cqgpgryldmzogfygpybl.supabase.co'
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZ3BncnlsZG16b2dmeWdweWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDMwMjksImV4cCI6MjA4ODI3OTAyOX0.MjkBexUvuAAU7sYcRs3uPaJh52jdMG723aqeDVuoe9w'
 const supabase = createClient(SUPA_URL, SUPA_KEY)
-const EDGE_FN_URL = `${SUPA_URL}/functions/v1/videiras-admin`
+const EDGE_FN_URL       = `${SUPA_URL}/functions/v1/videiras-admin`
+const SHARE_FN_URL      = `${SUPA_URL}/functions/v1/videiras-share`
 
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -1385,6 +1386,85 @@ function QuoteOverlay({ quote, onClose }) {
   )
 }
 
+function ShareModal({ wine, session, onClose }) {
+  const [email,   setEmail]   = React.useState('')
+  const [sending, setSending] = React.useState(false)
+  const [msg,     setMsg]     = React.useState('')
+
+  const handleSend = async () => {
+    if (!email.trim()) return
+    setSending(true); setMsg('')
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      const res = await fetch(SHARE_FN_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: email.trim(), wine }),
+      })
+      const data = await res.json()
+      if (data.ok) { setMsg('✓ Email enviado com sucesso!'); setEmail('') }
+      else setMsg('Erro: ' + (data.error || 'Não foi possível enviar.'))
+    } catch (e) {
+      setMsg('Erro: ' + e.message)
+    }
+    setSending(false)
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 400, background: '#161310',
+        border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14,
+        padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <Share2 size={14} color="#c8963e" />
+              <span style={{ fontSize: 14, color: '#e8dece', fontFamily: FONT }}>Partilhar vinho</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#4a453f', fontFamily: FONT }}>{wine.name}{wine.year ? ` · ${wine.year}` : ''}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', padding: '4px' }}><X size={16} /></button>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ ...S.lbl, display: 'block', marginBottom: 6 }}>Email do destinatário</label>
+          <input
+            style={{ ...S.inp, width: '100%' }}
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
+            placeholder="exemplo@email.com"
+            autoFocus
+          />
+        </div>
+
+        {msg && (
+          <div style={{
+            marginBottom: 14, padding: '8px 12px', borderRadius: 6, fontSize: 12,
+            color: msg.startsWith('✓') ? '#68c880' : '#e87080',
+            background: msg.startsWith('✓') ? 'rgba(104,200,128,0.08)' : 'rgba(232,112,128,0.08)',
+            fontFamily: FONT,
+          }}>{msg}</div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+          <Btn variant="gold" onClick={handleSend} disabled={sending || !email.trim()}>
+            <Send size={13} />{sending ? 'A enviar…' : 'Enviar'}
+          </Btn>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ModalShell({ onClose, children, isMobile }) {
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -1795,9 +1875,10 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session }) {
   const [tab, setTab] = useState('info')
   const [lightbox, setLightbox] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const wEntries  = entries.filter((e) => e.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const wConsumed = consumptions.filter((c) => c.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const tabSt = (t) => ({ padding: '8px 14px', fontSize: 13, cursor: 'pointer', border: 'none', background: 'none',
@@ -1806,6 +1887,7 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
   return (
     <>
       {lightbox && <PhotoLightbox src={wine.photo} onClose={() => setLightbox(false)} />}
+      {sharing && <ShareModal wine={wine} session={session} onClose={() => setSharing(false)} />}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 14, flex: 1, minWidth: 0 }}>
           <WineThumb photo={wine.photo} type={wine.type} size={44} onClick={wine.photo ? () => setLightbox(true) : undefined} />
@@ -1816,6 +1898,7 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
+          <button onClick={() => setSharing(true)} title="Partilhar" style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 6, color: '#9a8f82', cursor: 'pointer', padding: '6px 8px' }}><Share2 size={14} /></button>
           <button onClick={onEdit}   style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 6, color: '#9a8f82', cursor: 'pointer', padding: '6px 8px' }}><Edit2 size={14} /></button>
           <button onClick={onDelete} style={{ background: 'rgba(192,48,74,0.1)',    border: 'none', borderRadius: 6, color: '#e87080', cursor: 'pointer', padding: '6px 8px' }}><Trash2 size={14} /></button>
           <button onClick={onClose}  style={{ background: 'none', border: 'none', color: '#9a8f82', cursor: 'pointer', padding: '6px 8px' }}><X size={16} /></button>
@@ -3773,7 +3856,7 @@ export default function App() {
         <ModalShell onClose={closeModal} isMobile={isMobile}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
           {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}

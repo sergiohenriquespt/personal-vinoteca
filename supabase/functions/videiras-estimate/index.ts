@@ -32,11 +32,26 @@ serve(async (req) => {
       })
     }
 
-    const { name, year } = await req.json()
-    if (!name) {
+    const body = await req.json().catch(() => ({}))
+    const { name, year } = body
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'Missing wine name' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+    if (name.length > 200) {
+      return new Response(JSON.stringify({ error: 'Wine name too long' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (year !== undefined && year !== null) {
+      const y = Number(year)
+      if (!Number.isInteger(y) || y < 1900 || y > new Date().getFullYear() + 2) {
+        return new Response(JSON.stringify({ error: 'Invalid year' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY')

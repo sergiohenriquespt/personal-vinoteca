@@ -344,7 +344,7 @@ function ModalShell({ onClose, children, isMobile }) {
         display: 'flex', zIndex: 100, backdropFilter: 'blur(4px)',
         ...(isMobile
           ? { alignItems: 'flex-end', justifyContent: 'stretch' }
-          : { alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 16px' })
+          : { alignItems: 'center', justifyContent: 'center', padding: '24px 16px' })
       }}>
       <div onClick={(e) => e.stopPropagation()}
         style={{
@@ -352,7 +352,7 @@ function ModalShell({ onClose, children, isMobile }) {
           fontFamily: FONT, overflowY: 'auto',
           ...(isMobile
             ? { width: '100%', maxHeight: '92vh', borderRadius: '16px 16px 0 0', padding: '20px 20px 32px' }
-            : { borderRadius: 14, padding: '28px 28px 24px', width: '100%', maxWidth: 560, margin: 'auto 0' })
+            : { borderRadius: 14, padding: '28px 28px 24px', width: '100%', maxWidth: 560, maxHeight: 'calc(100vh - 48px)' })
         }}>
         {children}
       </div>

@@ -666,7 +666,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose }) {
+function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, isMobile }) {
   const [f, setF] = useState(entry
     ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price) }
     : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
@@ -675,9 +675,9 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
   return (
     <>
       <ModalHeader title={entry ? "Editar Entrada" : "Registar Entrada"} subtitle={`${wine.name} · ${wine.year}`} onClose={onClose} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 80px', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
-        <div><label style={S.lbl}>Qtd.</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
+        <div><label style={S.lbl}>Quantidade</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
       <div style={S.field}>
         <label style={S.lbl}>Fornecedor</label>
@@ -710,7 +710,7 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
 }
 
 // ─── CONSUMPTION FORM ─────────────────────────────────────────────────────────
-function ConsumptionForm({ wine, consumption, onSave, onClose }) {
+function ConsumptionForm({ wine, consumption, onSave, onClose, isMobile }) {
   const [f, setF] = useState(consumption
     ? { date: consumption.date, quantity: consumption.quantity, rating: consumption.rating || 0, notes: consumption.notes || '' }
     : { date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '' })
@@ -720,9 +720,9 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
   return (
     <>
       <ModalHeader title={consumption ? "Editar Consumo" : "Registar Consumo"} subtitle={`${wine.name} · ${wine.year} · ${maxQty} disponíveis`} onClose={onClose} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 80px', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
-        <div><label style={S.lbl}>Qtd. (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
+        <div><label style={S.lbl}>Quantidade (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
       <div style={S.field}><label style={S.lbl}>Classificação Pessoal</label><div style={{ padding: '8px 0' }}><Stars value={f.rating} onChange={(v) => set('rating', v)} size={22} /></div></div>
       <div style={S.field}><label style={S.lbl}>Observações</label><textarea style={{ ...S.inp, minHeight: 72, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Ocasião, maridagem, notas de prova…" /></div>
@@ -2717,10 +2717,10 @@ export default function App() {
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
-          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
-          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} />}
-          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
-          {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} isMobile={isMobile} />}
+          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} isMobile={isMobile} />}
+          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} isMobile={isMobile} />}
+          {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} isMobile={isMobile} />}
         </ModalShell>
       )}
     </div>

@@ -675,9 +675,9 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
   return (
     <>
       <ModalHeader title={entry ? "Editar Entrada" : "Registar Entrada"} subtitle={`${wine.name} · ${wine.year}`} onClose={onClose} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
-        <div><label style={S.lbl}>Quantidade</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
+        <div><label style={S.lbl}>Qtd.</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
       <div style={S.field}>
         <label style={S.lbl}>Fornecedor</label>
@@ -703,7 +703,7 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
       <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0,00" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="gold" onClick={() => { if (f.quantity >= 1) onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 }) }}><LogIn size={14} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
+        <Btn variant="gold" onClick={() => { if (f.quantity >= 1) { if (entry || window.confirm(`Registar entrada de ${f.quantity} ${parseInt(f.quantity) === 1 ? 'garrafa' : 'garrafas'} de "${wine.name}"?`)) onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 }) } }}><LogIn size={14} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
       </div>
     </>
   )
@@ -720,15 +720,15 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
   return (
     <>
       <ModalHeader title={consumption ? "Editar Consumo" : "Registar Consumo"} subtitle={`${wine.name} · ${wine.year} · ${maxQty} disponíveis`} onClose={onClose} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 12, marginBottom: 14 }}>
         <div><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
-        <div><label style={S.lbl}>Quantidade (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
+        <div><label style={S.lbl}>Qtd. (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
       <div style={S.field}><label style={S.lbl}>Classificação Pessoal</label><div style={{ padding: '8px 0' }}><Stars value={f.rating} onChange={(v) => set('rating', v)} size={22} /></div></div>
       <div style={S.field}><label style={S.lbl}>Observações</label><textarea style={{ ...S.inp, minHeight: 72, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Ocasião, maridagem, notas de prova…" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="gold" onClick={() => { if (f.quantity >= 1 && f.quantity <= maxQty) onSave({ ...f, quantity: parseInt(f.quantity) }) }}><LogOut size={14} />{consumption ? 'Guardar' : 'Registar Consumo'}</Btn>
+        <Btn variant="gold" onClick={() => { if (f.quantity >= 1 && f.quantity <= maxQty) { if (consumption || window.confirm(`Registar consumo de ${f.quantity} ${parseInt(f.quantity) === 1 ? 'garrafa' : 'garrafas'} de "${wine.name}"?`)) onSave({ ...f, quantity: parseInt(f.quantity) }) } }}><LogOut size={14} />{consumption ? 'Guardar' : 'Registar Consumo'}</Btn>
       </div>
     </>
   )

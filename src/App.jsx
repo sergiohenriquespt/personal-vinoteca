@@ -5,7 +5,7 @@ import {
   Edit2, Trash2, X, Menu, Sparkles, Check,
   LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
   ShieldCheck, Users, UserCheck, UserX, Settings, KeyRound,
-  FileText, Download, FileSpreadsheet, TrendingUp, Share2, Send,
+  FileText, Download, FileSpreadsheet, TrendingUp, Share2, Send, Instagram,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -258,10 +258,160 @@ function QuoteOverlay({ quote, onClose }) {
   )
 }
 
+// ─── INSTAGRAM IMAGE GENERATOR ────────────────────────────────────────────────
+async function generateInstagramImage(wine) {
+  const W = 1080, H = 1080, PAD = 80
+  const canvas = document.createElement('canvas')
+  canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+
+  const fillRRect = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill() }
+
+  const wrapLines = (text, maxW) => {
+    const words = text.split(' '), lines = []
+    let line = ''
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word } else line = test
+    }
+    if (line) lines.push(line)
+    return lines
+  }
+
+  const drawWrap = (text, cx, y, maxW, lineH, maxLines = 3) => {
+    const lines = wrapLines(text, maxW).slice(0, maxLines)
+    lines.forEach((l, i) => ctx.fillText(l, cx, y + i * lineH))
+    return lines.length * lineH
+  }
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, 0, H)
+  bg.addColorStop(0, '#1c1915'); bg.addColorStop(1, '#0e0c0a')
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
+
+  // Vignette
+  const vig = ctx.createRadialGradient(W/2, H/2, W*0.25, W/2, H/2, W*0.8)
+  vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.45)')
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H)
+
+  // Gold top bar
+  ctx.fillStyle = '#c8963e'; ctx.fillRect(0, 0, W, 5)
+
+  // Corner accents
+  ctx.strokeStyle = 'rgba(200,150,62,0.18)'; ctx.lineWidth = 1.5
+  const CA = 36, CO = PAD
+  ;[[CO,CO+CA,CO,CO,CO+CA,CO],[W-CO-CA,CO,W-CO,CO,W-CO,CO+CA],
+    [CO,H-CO-CA,CO,H-CO,CO+CA,H-CO],[W-CO-CA,H-CO,W-CO,H-CO,W-CO,H-CO-CA]
+  ].forEach(([x1,y1,xm,ym,x2,y2]) => { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xm,ym); ctx.lineTo(x2,y2); ctx.stroke() })
+
+  // "VINOTECA" header
+  ctx.font = '400 17px Outfit, system-ui, sans-serif'
+  ctx.fillStyle = 'rgba(154,143,130,0.4)'; ctx.textAlign = 'center'
+  ctx.fillText('VINOTECA', W/2, PAD + 18)
+
+  let y = PAD + 52
+
+  // Photo (if exists)
+  if (wine.photo) {
+    await new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => {
+        const PW = 290, PH = 360, px = (W - PW) / 2
+        ctx.save(); ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.clip()
+        const scale = Math.max(PW/img.width, PH/img.height)
+        ctx.drawImage(img, px+(PW-img.width*scale)/2, y+(PH-img.height*scale)/2, img.width*scale, img.height*scale)
+        ctx.restore()
+        ctx.strokeStyle = 'rgba(200,150,62,0.25)'; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.stroke()
+        y += PH + 40; resolve()
+      }
+      img.onerror = () => resolve()
+      img.src = wine.photo
+    })
+  } else {
+    y = 200
+  }
+
+  // Type badge
+  const tc = getTC(wine.type)
+  if (wine.type) {
+    ctx.font = '600 19px Outfit, system-ui, sans-serif'
+    const tw = ctx.measureText(wine.type.toUpperCase()).width + 32
+    ctx.fillStyle = tc.bg; fillRRect((W-tw)/2, y, tw, 32, 16)
+    ctx.fillStyle = tc.fg; ctx.textAlign = 'center'
+    ctx.fillText(wine.type.toUpperCase(), W/2, y + 22)
+    y += 32 + 26
+  }
+
+  // Wine name
+  const nLen = wine.name.length
+  const nSize = nLen > 28 ? 48 : nLen > 18 ? 58 : 68
+  ctx.font = `300 ${nSize}px Outfit, system-ui, sans-serif`
+  ctx.fillStyle = '#e8dece'; ctx.textAlign = 'center'
+  y += drawWrap(wine.name, W/2, y, W - PAD*2.5, nSize*1.22, 2) + 18
+
+  // Year · Region (no price)
+  const sub = [wine.year && String(wine.year), [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join('  ·  ')
+  if (sub) {
+    ctx.font = '300 26px Outfit, system-ui, sans-serif'; ctx.fillStyle = '#5a5048'
+    ctx.fillText(sub, W/2, y); y += 42
+  }
+
+  // Divider
+  y += 8
+  ctx.strokeStyle = 'rgba(200,150,62,0.2)'; ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(PAD*2, y); ctx.lineTo(W-PAD*2, y); ctx.stroke()
+  y += 32
+
+  // Stars
+  if (wine.personalRating) {
+    ctx.font = '400 34px Outfit, system-ui, sans-serif'; ctx.textAlign = 'left'
+    const sw = ctx.measureText('★').width + 10
+    const sx = (W - (5*sw - 10)) / 2
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i < wine.personalRating ? '#d4a843' : '#252018'
+      ctx.fillText('★', sx + i*sw, y)
+    }
+    ctx.textAlign = 'center'; y += 44
+  }
+
+  // Notes (sem preço)
+  if (wine.notes) {
+    y += 4
+    ctx.font = 'italic 300 22px Outfit, system-ui, sans-serif'
+    ctx.fillStyle = 'rgba(200,150,62,0.45)'
+    drawWrap(`"${wine.notes}"`, W/2, y, W - PAD*3, 32, 2)
+  }
+
+  // Gold bottom bar + branding
+  ctx.fillStyle = '#c8963e'; ctx.fillRect(0, H-5, W, 5)
+  ctx.font = '400 15px Outfit, system-ui, sans-serif'
+  ctx.fillStyle = 'rgba(74,69,63,0.5)'; ctx.textAlign = 'center'
+  ctx.fillText('VINOTECA', W/2, H - PAD + 14)
+
+  // Download
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${wine.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()}_instagram.png`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }, 'image/png')
+}
+
+// ─── SHARE MODAL ──────────────────────────────────────────────────────────────
 function ShareModal({ wine, session, onClose }) {
-  const [email,   setEmail]   = React.useState('')
-  const [sending, setSending] = React.useState(false)
-  const [msg,     setMsg]     = React.useState('')
+  const [email,      setEmail]      = React.useState('')
+  const [sending,    setSending]    = React.useState(false)
+  const [msg,        setMsg]        = React.useState('')
+  const [genLoading, setGenLoading] = React.useState(false)
+
+  const handleInstagram = async () => {
+    setGenLoading(true)
+    await generateInstagramImage(wine)
+    setGenLoading(false)
+  }
 
   const handleSend = async () => {
     if (!email.trim()) return
@@ -326,11 +476,23 @@ function ShareModal({ wine, session, onClose }) {
           }}>{msg}</div>
         )}
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 20 }}>
           <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
           <Btn variant="gold" onClick={handleSend} disabled={sending || !email.trim()}>
             <Send size={13} />{sending ? 'A enviar…' : 'Enviar'}
           </Btn>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 18 }}>
+          <div style={{ fontSize: 10, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, fontFamily: FONT }}>Imagem para Instagram</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 12, color: '#6a5f52', fontFamily: FONT, lineHeight: 1.4 }}>
+              Gera um cartão 1080×1080 sem preço,<br />pronto a partilhar.
+            </span>
+            <Btn variant="ghost" onClick={handleInstagram} disabled={genLoading} style={{ flexShrink: 0, borderColor: 'rgba(200,150,62,0.2)' }}>
+              <Instagram size={13} />{genLoading ? 'A gerar…' : 'Transferir'}
+            </Btn>
+          </div>
         </div>
       </div>
     </div>

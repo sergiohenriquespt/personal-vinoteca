@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { name: name || '' },
-      redirectTo: `${Deno.env.get('APP_URL') || 'https://videiras.vercel.app'}/`,
+      redirectTo: `${Deno.env.get('APP_URL') ?? ''}/`,
     })
     if (error) return json({ error: error.message }, 500)
 

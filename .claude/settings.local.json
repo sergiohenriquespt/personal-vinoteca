@@ -12,7 +12,12 @@
       "mcp__plugin_supabase_supabase__execute_sql",
       "mcp__plugin_supabase_supabase__list_edge_functions",
       "mcp__plugin_supabase_supabase__get_edge_function",
-      "mcp__plugin_supabase_supabase__deploy_edge_function"
+      "mcp__plugin_supabase_supabase__deploy_edge_function",
+      "Bash(node:*)",
+      "Bash(cmd:*)",
+      "Bash(/c/Windows/System32/cmd.exe:*)",
+      "Read(//c/Users/sergiohenriques/.bun/**)",
+      "Read(//c/Users/sergiohenriques/AppData/Roaming/npm//**)"
     ]
   }
 }

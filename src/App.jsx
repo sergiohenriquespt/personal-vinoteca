@@ -356,7 +356,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
     ctx.fillStyle = tc.bg; fillRRect((W-tw)/2, y, tw, 32, 16)
     ctx.fillStyle = tc.fg; ctx.textAlign = 'center'
     ctx.fillText(wine.type.toUpperCase(), W/2, y + 22)
-    y += 32 + 56
+    y += 32 + 68
   }
 
   // Wine name
@@ -364,7 +364,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   const nSize = nLen > 28 ? 48 : nLen > 18 ? 58 : 68
   ctx.font = `300 ${nSize}px Outfit, system-ui, sans-serif`
   ctx.fillStyle = '#e8dece'; ctx.textAlign = 'center'
-  y += drawWrap(wine.name, W/2, y, W - PAD*2.5, nSize*1.22, 2) + 10
+  y += drawWrap(wine.name, W/2, y, W - PAD*2.5, nSize*1.22, 2) + 4
 
   // Year · Region · Country (no price)
   const sub = [wine.year && String(wine.year), [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join('  ·  ')
@@ -385,7 +385,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   y += 8
   ctx.strokeStyle = 'rgba(200,150,62,0.2)'; ctx.lineWidth = 1
   ctx.beginPath(); ctx.moveTo(PAD*2, y); ctx.lineTo(W-PAD*2, y); ctx.stroke()
-  y += 32
+  y += 48
 
   // Stars
   if (wine.personalRating) {

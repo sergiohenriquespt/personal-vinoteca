@@ -345,7 +345,46 @@ async function generateInstagramImage(wine, tastingNotes = '') {
       img.src = wine.photo
     })
   } else {
-    y += 30
+    // Placeholder: coloured block with wine glass
+    const tc = getTC(wine.type)
+    const PW = 290, PH = 360, px = (W - PW) / 2
+
+    // Background rounded rect
+    ctx.save()
+    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.clip()
+
+    // Solid fill with type colour
+    ctx.fillStyle = tc.bg
+    ctx.fillRect(px, y, PW, PH)
+
+    // Radial glow at centre
+    const glow = ctx.createRadialGradient(W/2, y + PH*0.45, 10, W/2, y + PH*0.45, PW*0.55)
+    glow.addColorStop(0, tc.fg + '28')
+    glow.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = glow; ctx.fillRect(px, y, PW, PH)
+    ctx.restore()
+
+    // Subtle border
+    ctx.strokeStyle = tc.fg + '40'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.stroke()
+
+    // Wine glass drawn directly in canvas (32×32 viewBox scaled to ~130px)
+    const GS = 130, GX = (W - GS) / 2, GY = y + (PH - GS) / 2 - 10
+    const sc = GS / 32
+    ctx.save()
+    ctx.translate(GX, GY)
+    ctx.scale(sc, sc)
+    ctx.strokeStyle = tc.fg + 'cc'; ctx.lineWidth = 1.5 / sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    // Bowl
+    ctx.beginPath(); ctx.moveTo(10,7); ctx.lineTo(22,7); ctx.lineTo(19,15)
+    ctx.quadraticCurveTo(16,18,16,18); ctx.quadraticCurveTo(16,18,13,15); ctx.closePath(); ctx.stroke()
+    // Stem
+    ctx.beginPath(); ctx.moveTo(16,18); ctx.lineTo(16,24); ctx.stroke()
+    // Base
+    ctx.beginPath(); ctx.moveTo(11,24); ctx.lineTo(21,24); ctx.stroke()
+    ctx.restore()
+
+    y += PH + 44
   }
 
   // Type badge

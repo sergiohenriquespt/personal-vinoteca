@@ -259,7 +259,7 @@ function QuoteOverlay({ quote, onClose }) {
 }
 
 // ─── INSTAGRAM IMAGE GENERATOR ────────────────────────────────────────────────
-async function generateInstagramImage(wine) {
+async function generateInstagramImage(wine, tastingNotes = '') {
   const W = 1080, H = 1080, PAD = 80
   const canvas = document.createElement('canvas')
   canvas.width = W; canvas.height = H
@@ -284,6 +284,15 @@ async function generateInstagramImage(wine) {
     return lines.length * lineH
   }
 
+  // Load app icon from SVG
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#161310"/><rect width="32" height="32" rx="7" fill="none" stroke="#c8963e" stroke-width="1.5"/><path d="M10 7 L22 7 L19 15 Q16 18 16 18 Q16 18 13 15 Z" fill="none" stroke="#c8963e" stroke-width="1.5" stroke-linejoin="round"/><line x1="16" y1="18" x2="16" y2="24" stroke="#c8963e" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="24" x2="21" y2="24" stroke="#c8963e" stroke-width="1.5" stroke-linecap="round"/></svg>`
+  const iconImg = await new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(iconSvg)
+  })
+
   // Background
   const bg = ctx.createLinearGradient(0, 0, 0, H)
   bg.addColorStop(0, '#1c1915'); bg.addColorStop(1, '#0e0c0a')
@@ -304,12 +313,19 @@ async function generateInstagramImage(wine) {
     [CO,H-CO-CA,CO,H-CO,CO+CA,H-CO],[W-CO-CA,H-CO,W-CO,H-CO,W-CO,H-CO-CA]
   ].forEach(([x1,y1,xm,ym,x2,y2]) => { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xm,ym); ctx.lineTo(x2,y2); ctx.stroke() })
 
-  // "VINOTECA" header
-  ctx.font = '400 17px Outfit, system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(154,143,130,0.4)'; ctx.textAlign = 'center'
-  ctx.fillText('VINOTECA', W/2, PAD + 18)
+  // Header: icon + "VIDEIRAS"
+  const ICON_S = 44
+  ctx.font = '300 28px Outfit, system-ui, sans-serif'
+  ctx.fillStyle = 'rgba(154,143,130,0.5)'
+  const headerTextW = ctx.measureText('VIDEIRAS').width
+  const headerTotalW = ICON_S + 12 + headerTextW
+  const headerX = (W - headerTotalW) / 2
+  const headerY = PAD + 12
+  if (iconImg) ctx.drawImage(iconImg, headerX, headerY, ICON_S, ICON_S)
+  ctx.textAlign = 'left'
+  ctx.fillText('VIDEIRAS', headerX + ICON_S + 12, headerY + ICON_S * 0.72)
 
-  let y = PAD + 52
+  let y = headerY + ICON_S + 36
 
   // Photo (if exists)
   if (wine.photo) {
@@ -323,13 +339,13 @@ async function generateInstagramImage(wine) {
         ctx.restore()
         ctx.strokeStyle = 'rgba(200,150,62,0.25)'; ctx.lineWidth = 1.5
         ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.stroke()
-        y += PH + 40; resolve()
+        y += PH + 44; resolve()
       }
       img.onerror = () => resolve()
       img.src = wine.photo
     })
   } else {
-    y = 200
+    y += 30
   }
 
   // Type badge
@@ -340,7 +356,7 @@ async function generateInstagramImage(wine) {
     ctx.fillStyle = tc.bg; fillRRect((W-tw)/2, y, tw, 32, 16)
     ctx.fillStyle = tc.fg; ctx.textAlign = 'center'
     ctx.fillText(wine.type.toUpperCase(), W/2, y + 22)
-    y += 32 + 26
+    y += 32 + 40
   }
 
   // Wine name
@@ -348,13 +364,21 @@ async function generateInstagramImage(wine) {
   const nSize = nLen > 28 ? 48 : nLen > 18 ? 58 : 68
   ctx.font = `300 ${nSize}px Outfit, system-ui, sans-serif`
   ctx.fillStyle = '#e8dece'; ctx.textAlign = 'center'
-  y += drawWrap(wine.name, W/2, y, W - PAD*2.5, nSize*1.22, 2) + 18
+  y += drawWrap(wine.name, W/2, y, W - PAD*2.5, nSize*1.22, 2) + 20
 
-  // Year · Region (no price)
+  // Year · Region · Country (no price)
   const sub = [wine.year && String(wine.year), [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join('  ·  ')
   if (sub) {
     ctx.font = '300 26px Outfit, system-ui, sans-serif'; ctx.fillStyle = '#5a5048'
-    ctx.fillText(sub, W/2, y); y += 42
+    ctx.fillText(sub, W/2, y); y += 44
+  }
+
+  // Tasting notes from share modal (below year/region)
+  if (tastingNotes && tastingNotes.trim()) {
+    y += 4
+    ctx.font = 'italic 300 23px Outfit, system-ui, sans-serif'
+    ctx.fillStyle = 'rgba(200,150,62,0.55)'
+    y += drawWrap(`"${tastingNotes.trim()}"`, W/2, y, W - PAD*2.5, 34, 3) + 10
   }
 
   // Divider
@@ -372,22 +396,14 @@ async function generateInstagramImage(wine) {
       ctx.fillStyle = i < wine.personalRating ? '#d4a843' : '#252018'
       ctx.fillText('★', sx + i*sw, y)
     }
-    ctx.textAlign = 'center'; y += 44
-  }
-
-  // Notes (sem preço)
-  if (wine.notes) {
-    y += 4
-    ctx.font = 'italic 300 22px Outfit, system-ui, sans-serif'
-    ctx.fillStyle = 'rgba(200,150,62,0.45)'
-    drawWrap(`"${wine.notes}"`, W/2, y, W - PAD*3, 32, 2)
+    ctx.textAlign = 'center'
   }
 
   // Gold bottom bar + branding
   ctx.fillStyle = '#c8963e'; ctx.fillRect(0, H-5, W, 5)
   ctx.font = '400 15px Outfit, system-ui, sans-serif'
   ctx.fillStyle = 'rgba(74,69,63,0.5)'; ctx.textAlign = 'center'
-  ctx.fillText('VINOTECA', W/2, H - PAD + 14)
+  ctx.fillText('© Videiras Cellar Collection', W/2, H - PAD + 14)
 
   // Download
   canvas.toBlob(blob => {
@@ -405,11 +421,12 @@ function ShareModal({ wine, session, onClose }) {
   const [email,      setEmail]      = React.useState('')
   const [sending,    setSending]    = React.useState(false)
   const [msg,        setMsg]        = React.useState('')
-  const [genLoading, setGenLoading] = React.useState(false)
+  const [genLoading,   setGenLoading]   = React.useState(false)
+  const [tastingNotes, setTastingNotes] = React.useState('')
 
   const handleInstagram = async () => {
     setGenLoading(true)
-    await generateInstagramImage(wine)
+    await generateInstagramImage(wine, tastingNotes)
     setGenLoading(false)
   }
 
@@ -485,12 +502,18 @@ function ShareModal({ wine, session, onClose }) {
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 18 }}>
           <div style={{ fontSize: 10, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, fontFamily: FONT }}>Imagem para Instagram</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 12, color: '#6a5f52', fontFamily: FONT, lineHeight: 1.4 }}>
-              Gera um cartão 1080×1080 sem preço,<br />pronto a partilhar.
-            </span>
-            <Btn variant="ghost" onClick={handleInstagram} disabled={genLoading} style={{ flexShrink: 0, borderColor: 'rgba(200,150,62,0.2)' }}>
-              <Instagram size={13} />{genLoading ? 'A gerar…' : 'Transferir'}
+          <div style={{ marginBottom: 12 }}>
+            <label style={S.lbl}>Notas de prova <span style={{ color: '#4a453f', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional — aparece apenas no cartão)</span></label>
+            <textarea
+              style={{ ...S.inp, minHeight: 72, resize: 'vertical', width: '100%' }}
+              value={tastingNotes}
+              onChange={e => setTastingNotes(e.target.value)}
+              placeholder="Frutos vermelhos, taninos suaves, final longo…"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Btn variant="ghost" onClick={handleInstagram} disabled={genLoading} style={{ borderColor: 'rgba(200,150,62,0.2)' }}>
+              <Instagram size={13} />{genLoading ? 'A gerar…' : 'Transferir imagem'}
             </Btn>
           </div>
         </div>

@@ -3,7 +3,11 @@
     "allow": [
       "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\sergiohenriques\\\\GitHub\\\\personal-vinoteca\\\\supabase\\\\functions\\\\videiras-estimate\")",
       "Bash(Out-Null)",
-      "Bash(git.exe status:*)"
+      "Bash(git.exe status:*)",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__get_project",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs"
     ]
   }
 }

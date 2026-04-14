@@ -11,16 +11,13 @@ import {
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
 const FONT = "'Outfit', system-ui, sans-serif"
 
-// ─── ANTHROPIC API KEY ────────────────────────────────────────────────────────
-// Substitui pela tua chave em https://console.anthropic.com/
-const ANTHROPIC_API_KEY = ''
-
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
-const SUPA_URL = 'https://cqgpgryldmzogfygpybl.supabase.co'
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZ3BncnlsZG16b2dmeWdweWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDMwMjksImV4cCI6MjA4ODI3OTAyOX0.MjkBexUvuAAU7sYcRs3uPaJh52jdMG723aqeDVuoe9w'
+const SUPA_URL = import.meta.env.VITE_SUPA_URL
+const SUPA_KEY = import.meta.env.VITE_SUPA_KEY
 const supabase = createClient(SUPA_URL, SUPA_KEY)
 const EDGE_FN_URL       = `${SUPA_URL}/functions/v1/videiras-admin`
 const SHARE_FN_URL      = `${SUPA_URL}/functions/v1/videiras-share`
+const ESTIMATE_FN_URL   = `${SUPA_URL}/functions/v1/videiras-estimate`
 
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -1622,26 +1619,19 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
   const fetchVivino = async () => {
     if (!f.name) return
-    if (!ANTHROPIC_API_KEY) { setVivinoStatus('nokey'); return }
     setLoadingV(true); setVivinoStatus('idle')
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      const res = await fetch(ESTIMATE_FN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${s.access_token}`,
         },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001', max_tokens: 60,
-          messages: [{ role: 'user', content: `Vivino community rating (scale 1.0–5.0) for the wine "${f.name}"${f.year ? ` ${f.year}` : ''}. Reply ONLY with valid JSON, no markdown: {"rating":X.X}` }],
-        }),
+        body: JSON.stringify({ name: f.name, year: f.year || null }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      const txt  = (data.content?.[0]?.text || '').replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(txt)
+      const parsed = await res.json()
       if (parsed.rating && parsed.rating >= 1 && parsed.rating <= 5) {
         set('vivinoRating', parsed.rating.toFixed(1))
         setVivinoStatus('ok')
@@ -1761,7 +1751,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
                 padding: '0 10px', opacity: !f.name ? 0.4 : 1,
                 display: 'flex', alignItems: 'center', transition: 'all 0.2s', minWidth: 36, justifyContent: 'center',
               }}
-              title={!ANTHROPIC_API_KEY ? 'Define ANTHROPIC_API_KEY no topo do App.jsx' : 'Estimar rating via IA'}>
+              title="Estimar rating via IA">
               {loadingV ? <span style={{ fontSize: 13 }}>…</span> : vivinoStatus === 'ok' ? <Check size={14} /> : vivinoStatus === 'error' ? <X size={14} /> : <Sparkles size={14} />}
             </button>
             {f.name && (
@@ -1778,11 +1768,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
               </a>
             )}
           </div>
-          {vivinoStatus === 'nokey' && (
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#e87080', lineHeight: 1.4 }}>
-              Define <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 4px', borderRadius: 3 }}>ANTHROPIC_API_KEY</code> no topo do <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 4px', borderRadius: 3 }}>App.jsx</code>
-            </p>
-          )}
           {vivinoStatus === 'error' && (
             <p style={{ margin: '5px 0 0', fontSize: 11, color: '#e87080' }}>Não foi possível estimar. Tenta de novo ou introduz manualmente.</p>
           )}

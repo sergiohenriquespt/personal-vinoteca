@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\sergiohenriques\\\\GitHub\\\\personal-vinoteca\\\\supabase\\\\functions\\\\videiras-estimate\")",
+      "Bash(Out-Null)",
+      "Bash(git.exe status:*)"
+    ]
+  }
+}

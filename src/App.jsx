@@ -807,6 +807,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         <div>
           <label style={S.lbl}>País</label>
           <FilterSelect
+            fill
             placeholder="Seleccionar país"
             value={f.country}
             onChange={(v) => { set('country', v); set('region', '') }}
@@ -817,6 +818,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         <div>
           <label style={S.lbl}>Região</label>
           <FilterSelect
+            fill
             placeholder={regions.length ? 'Seleccionar região' : 'Livre'}
             value={f.region}
             onChange={(v) => set('region', v)}
@@ -1151,7 +1153,7 @@ function PieChart({ data, total }) {
 }
 
 // ─── FILTER SELECT WITH INLINE ADD ────────────────────────────────────────────
-function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove }) {
+function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, fill }) {
   const [adding, setAdding] = useState(false)
   const [newVal, setNewVal] = useState('')
   const confirmAdd = () => {
@@ -1178,8 +1180,8 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove }
     </div>
   )
   return (
-    <div style={{ display: 'flex', gap: 3, alignItems: 'center', width: '100%' }}>
-      <select style={{ ...S.inp, flex: 1, minWidth: 0, fontSize: 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
+    <div style={{ display: 'flex', gap: 3, alignItems: 'center', width: fill ? '100%' : undefined }}>
+      <select style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o}>{o}</option>)}
       </select>

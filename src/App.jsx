@@ -108,6 +108,12 @@ const consumptionToDb = (c) => ({
   rating: c.rating || null, notes: c.notes || '',
 })
 
+// ─── LOCAL CACHE ──────────────────────────────────────────────────────────────
+const CACHE_KEY = 'videiras_data_v1'
+const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') } catch { return null } }
+const saveCache = (d) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)) } catch {} }
+const clearCache = () => { try { localStorage.removeItem(CACHE_KEY) } catch {} }
+
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const S = {
   inp: {
@@ -2439,13 +2445,13 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
 
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [wines,            setWines]            = useState([])
-  const [entries,          setEntries]          = useState([])
-  const [consumptions,     setConsumptions]     = useState([])
+  const [wines,            setWines]            = useState(() => { const c = loadCache(); return c?.wines?.map(wineFromDb) ?? [] })
+  const [entries,          setEntries]          = useState(() => { const c = loadCache(); return c?.entries?.map(entryFromDb) ?? [] })
+  const [consumptions,     setConsumptions]     = useState(() => { const c = loadCache(); return c?.consumptions?.map(consumptionFromDb) ?? [] })
   const [session,          setSession]          = useState(null)
   const [profile,          setProfile]          = useState(null)
   const [authLoading,      setAuthLoading]      = useState(true)
-  const [loading,          setLoading]          = useState(true)
+  const [loading,          setLoading]          = useState(() => !loadCache())
   const [types,            setTypes]            = useState(INIT_TYPES)
   const [suppliers,        setSuppliers]        = useState([])
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
@@ -2506,6 +2512,7 @@ export default function App() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'SIGNED_OUT') {
+        clearCache()
         setSession(null); setProfile(null)
         setWines([]); setEntries([]); setConsumptions([])
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
@@ -2519,9 +2526,9 @@ export default function App() {
   // ── CARREGAR DADOS DO SUPABASE ────────────────────────────────────────────
   useEffect(() => {
     if (!session) return
-    if (wines.length > 0) return  // já carregado — não recarregar no token refresh
+    const hasCachedData = !!loadCache()
     const load = async () => {
-      setLoading(true)
+      if (!hasCachedData) setLoading(true)
       try {
         const [wRes, eRes, cRes, sRes, qRes] = await Promise.all([
           supabase.from('videiras_wines').select('*').order('name'),
@@ -2539,6 +2546,11 @@ export default function App() {
         if (sRes.data && sRes.data.length > 0) setSuppliers(sRes.data.map(r => r.name))
         else setSuppliers([...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
         if (qRes.data) setQuotes(qRes.data)
+        saveCache({
+          wines:        wRes.data ?? [],
+          entries:      eRes.data ?? [],
+          consumptions: cRes.data ?? [],
+        })
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
       } finally {
@@ -2546,7 +2558,7 @@ export default function App() {
       }
     }
     load()
-  }, [session])
+  }, [session?.user?.id])
 
   const closeModal = () => { setModal(null); setActiveWine(null); setActiveEntry(null); setActiveCons(null) }
 

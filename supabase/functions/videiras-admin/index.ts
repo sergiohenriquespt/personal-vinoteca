@@ -136,6 +136,24 @@ Deno.serve(async (req) => {
     return json({ ok: true })
   }
 
+  // DELETE USER
+  if (req.method === 'POST' && action === 'delete-user') {
+    const { userId } = body
+    if (!isValidUUID(userId)) return json({ error: 'userId inválido' }, 400)
+    if (userId === user.id) return json({ error: 'Não podes eliminar a tua própria conta' }, 400)
+
+    // Remove data do utilizador
+    await supabaseAdmin.from('videiras_consumptions').delete().eq('user_id', userId)
+    await supabaseAdmin.from('videiras_entries').delete().eq('user_id', userId)
+    await supabaseAdmin.from('videiras_wines').delete().eq('user_id', userId)
+    await supabaseAdmin.from('videiras_suppliers').delete().eq('user_id', userId)
+    await supabaseAdmin.from('videiras_profiles').delete().eq('id', userId)
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    if (error) return json({ error: error.message }, 500)
+    return json({ ok: true })
+  }
+
   return json({ error: 'Acção não reconhecida' }, 400)
 })
 

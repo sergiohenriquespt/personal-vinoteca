@@ -1531,6 +1531,13 @@ function AdminPanel({ session }) {
     loadUsers()
   }
 
+  const deleteUser = async (u) => {
+    if (!window.confirm(`Eliminar permanentemente "${u.name || u.email}"?\n\nTodos os dados deste utilizador (vinhos, entradas, consumos) serão apagados. Esta acção é irreversível.`)) return
+    const data = await adminFetch('delete-user', 'POST', { userId: u.id })
+    if (data.ok) { setMsg(`Utilizador ${u.email} eliminado.`); loadUsers() }
+    else setMsg(`Erro: ${data.error}`)
+  }
+
   const handleImportFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -1881,6 +1888,10 @@ function AdminPanel({ session }) {
                     <button onClick={() => toggleActive(u)} title={u.active ? 'Desactivar' : 'Activar'}
                       style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.active ? '#e87080' : '#68c880', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
                       {u.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button onClick={() => deleteUser(u)} title="Eliminar utilizador"
+                      style={{ padding: '5px 8px', borderRadius: 4, border: '1px solid rgba(232,112,128,0.2)', background: 'none', color: '#e87080', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 )}

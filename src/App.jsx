@@ -853,6 +853,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
                 <ExternalLink size={13} />
               </a>
             )}
+          </div>
         </div>
       </div>
 

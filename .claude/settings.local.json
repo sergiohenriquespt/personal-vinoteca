@@ -17,7 +17,9 @@
       "Bash(cmd:*)",
       "Bash(/c/Windows/System32/cmd.exe:*)",
       "Read(//c/Users/sergiohenriques/.bun/**)",
-      "Read(//c/Users/sergiohenriques/AppData/Roaming/npm//**)"
+      "Read(//c/Users/sergiohenriques/AppData/Roaming/npm//**)",
+      "Bash(npm run *)",
+      "Bash(npx vite *)"
     ]
   }
 }

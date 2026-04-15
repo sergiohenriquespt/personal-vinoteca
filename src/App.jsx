@@ -785,7 +785,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         }
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 12, rowGap: 14, marginBottom: 14 }}>
         <div>
           <label style={S.lbl}>Tipo</label>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -804,9 +804,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
           <label style={S.lbl}>Ano</label>
           <input style={S.inp} type="number" value={f.year} onChange={(e) => set('year', e.target.value)} min={1900} max={2100} />
         </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
           <label style={S.lbl}>País</label>
           <FilterSelect
@@ -827,9 +824,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
             onAdd={addRegionForm}
           />
         </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
           <label style={S.lbl}>Preço de Compra (€)</label>
           <input style={S.inp} value={f.purchasePrice} onChange={(e) => set('purchasePrice', e.target.value)} placeholder="0,00" />
@@ -846,19 +840,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
           <label style={S.lbl}>Rating Vivino</label>
           <div style={{ display: 'flex', gap: 6 }}>
             <input style={{ ...S.inp, flex: 1 }} value={f.vivinoRating} onChange={(e) => set('vivinoRating', e.target.value)} placeholder="0.0" />
-            <button onClick={fetchVivino} disabled={loadingV || !f.name}
-              style={{
-                background: vivinoStatus === 'ok' ? 'rgba(104,200,128,0.15)' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? 'rgba(232,112,128,0.15)' : 'rgba(200,150,62,0.15)',
-                border: `1px solid ${vivinoStatus === 'ok' ? 'rgba(104,200,128,0.35)' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? 'rgba(232,112,128,0.35)' : 'rgba(200,150,62,0.3)'}`,
-                borderRadius: 6,
-                color: vivinoStatus === 'ok' ? '#68c880' : vivinoStatus === 'error' || vivinoStatus === 'nokey' ? '#e87080' : '#c8963e',
-                cursor: loadingV || !f.name ? 'not-allowed' : 'pointer',
-                padding: '0 10px', opacity: !f.name ? 0.4 : 1,
-                display: 'flex', alignItems: 'center', transition: 'all 0.2s', minWidth: 36, justifyContent: 'center',
-              }}
-              title="Estimar rating via IA">
-              {loadingV ? <span style={{ fontSize: 13 }}>…</span> : vivinoStatus === 'ok' ? <Check size={14} /> : vivinoStatus === 'error' ? <X size={14} /> : <Sparkles size={14} />}
-            </button>
             {f.name && (
               <a
                 href={`https://www.vivino.com/search/wines?q=${encodeURIComponent([f.name, f.year].filter(Boolean).join(' '))}`}
@@ -872,13 +853,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
                 <ExternalLink size={13} />
               </a>
             )}
-          </div>
-          {vivinoStatus === 'error' && (
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#e87080' }}>Não foi possível estimar. Tenta de novo ou introduz manualmente.</p>
-          )}
-          {vivinoStatus === 'ok' && (
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#68c880' }}>Rating estimado com sucesso.</p>
-          )}
         </div>
       </div>
 

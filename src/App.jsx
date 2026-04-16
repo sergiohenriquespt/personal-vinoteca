@@ -324,7 +324,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   // Header: icon + "VIDEIRAS"
   const ICON_S = 44
   ctx.font = '300 28px Outfit, system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(154,143,130,0.5)'
+  ctx.fillStyle = 'rgba(232,220,206,0.85)'
   const headerTextW = ctx.measureText('VIDEIRAS').width
   const headerTotalW = ICON_S + 12 + headerTextW
   const headerX = (W - headerTotalW) / 2
@@ -416,7 +416,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   // Year · Region · Country (no price)
   const sub = [wine.year && String(wine.year), [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join('  ·  ')
   if (sub) {
-    ctx.font = '300 26px Outfit, system-ui, sans-serif'; ctx.fillStyle = '#5a5048'
+    ctx.font = '300 26px Outfit, system-ui, sans-serif'; ctx.fillStyle = '#c8b89a'
     ctx.fillText(sub, W/2, y); y += 44
   }
 
@@ -449,7 +449,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   // Gold bottom bar + branding
   ctx.fillStyle = '#c8963e'; ctx.fillRect(0, H-5, W, 5)
   ctx.font = '400 15px Outfit, system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(74,69,63,0.5)'; ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(232,220,206,0.7)'; ctx.textAlign = 'center'
   ctx.fillText('© Videiras Cellar Collection', W/2, H - PAD + 14)
 
   // Download

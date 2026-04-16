@@ -1181,12 +1181,12 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, 
   )
   return (
     <div style={{ display: 'flex', gap: 3, alignItems: 'center', width: fill ? '100%' : undefined }}>
-      <select style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: fill ? 14 : 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o}>{o}</option>)}
       </select>
       <button onClick={() => setAdding(true)} title={`Adicionar a ${placeholder}`}
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: '#6a6058', cursor: 'pointer', padding: '4px 7px', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: '#6a6058', cursor: 'pointer', padding: '4px 7px', fontSize: fill ? 18 : 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
       {onRemove && value && (
         <button onClick={handleRemove} title={`Eliminar "${value}"`}
           style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', transition: 'color 0.15s, border-color 0.15s' }}

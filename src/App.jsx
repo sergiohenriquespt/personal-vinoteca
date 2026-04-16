@@ -1180,7 +1180,7 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, 
     </div>
   )
   return (
-    <div style={{ display: 'flex', gap: fill ? 6 : 3, alignItems: 'center', width: fill ? '100%' : undefined }}>
+    <div style={{ display: 'flex', gap: fill ? 6 : 3, alignItems: fill ? undefined : 'center', width: fill ? '100%' : undefined }}>
       <select style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: fill ? 14 : 12, cursor: 'pointer', paddingRight: 24 }} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o}>{o}</option>)}

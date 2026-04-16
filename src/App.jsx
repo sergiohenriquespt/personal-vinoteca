@@ -81,13 +81,15 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
 const wineFromDb = (r) => ({
   id: r.id, name: r.name, type: r.type, country: r.country, region: r.region,
   year: r.year, purchasePrice: parseFloat(r.purchase_price) || 0,
+  marketPrice: r.market_price != null ? parseFloat(r.market_price) : null,
   personalRating: parseFloat(r.personal_rating) || 0,
   vivinoRating: r.vivino_rating != null ? parseFloat(r.vivino_rating) : null,
   quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
 })
 const wineToDb = (w) => ({
   name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
-  purchase_price: w.purchasePrice || 0, personal_rating: w.personalRating || 0,
+  purchase_price: w.purchasePrice || 0, market_price: w.marketPrice ?? null,
+  personal_rating: w.personalRating || 0,
   vivino_rating: w.vivinoRating ?? null, quantity: w.quantity ?? 0,
   photo: w.photo || null, notes: w.notes || '',
 })
@@ -702,8 +704,8 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
 function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
-  const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
+  const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
   const [newType,    setNewType]    = useState('')
@@ -753,6 +755,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
   const handleSave = () => {
     if (!f.name.trim()) return
     onSave({ ...f, purchasePrice: parseFloat((f.purchasePrice + '').replace(',', '.')) || 0,
+      marketPrice: parseFloat((f.marketPrice + '').replace(',', '.')) || null,
       vivinoRating: parseFloat((f.vivinoRating + '').replace(',', '.')) || null,
       year: parseInt(f.year) || null, personalRating: f.personalRating || 0,
       quantity: wine ? f.quantity : parseInt(f.quantity) || 0 })
@@ -829,6 +832,25 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         <div>
           <label style={S.lbl}>Preço de Compra (€)</label>
           <input style={S.inp} value={f.purchasePrice} onChange={(e) => set('purchasePrice', e.target.value)} placeholder="0,00" />
+        </div>
+        <div>
+          <label style={S.lbl}>Preço de Mercado (€)</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input style={{ ...S.inp, flex: 1 }} value={f.marketPrice} onChange={(e) => set('marketPrice', e.target.value)} placeholder="0,00" />
+            {f.name && (
+              <a
+                href={`https://www.wine-searcher.com/find/${encodeURIComponent([f.name, f.year].filter(Boolean).join(' '))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Pesquisar "${f.name}${f.year ? ` ${f.year}` : ''}" no Wine-Searcher`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#6a6058', textDecoration: 'none', transition: 'all 0.15s', minWidth: 36 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e8dece' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#6a6058' }}
+              >
+                <Search size={13} />
+              </a>
+            )}
+          </div>
         </div>
         {!wine && <div><label style={S.lbl}>Quantidade Inicial</label><input style={S.inp} type="number" value={f.quantity} onChange={(e) => set('quantity', e.target.value)} min={0} /></div>}
       </div>

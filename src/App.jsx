@@ -1186,7 +1186,7 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, 
         {options.map((o) => <option key={o}>{o}</option>)}
       </select>
       <button onClick={() => setAdding(true)} title={`Adicionar a ${placeholder}`}
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5, color: '#6a6058', cursor: 'pointer', padding: '4px 7px', fontSize: fill ? 18 : 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: fill ? 6 : 5, color: fill ? '#9a8f82' : '#6a6058', cursor: 'pointer', padding: fill ? '0 10px' : '4px 7px', fontSize: fill ? 18 : 15, lineHeight: 1, display: 'flex', alignItems: 'center' }}>+</button>
       {onRemove && value && (
         <button onClick={handleRemove} title={`Eliminar "${value}"`}
           style={{ background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 5, color: '#3a3530', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center', transition: 'color 0.15s, border-color 0.15s' }}

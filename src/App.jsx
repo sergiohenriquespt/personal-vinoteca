@@ -1789,23 +1789,27 @@ function AdminPanel({ session }) {
           </div>
 
           {/* Importar */}
-          <div style={{ ...S.stat, padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <FileText size={14} color="#c8963e" />
-              <span style={{ fontSize: 13, color: '#e8dece' }}>Importar backup</span>
+          <div style={{ ...S.stat, padding: 20, display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FileText size={14} color="#c8963e" /> Importar backup
+                </div>
+                <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
+                  Selecciona um ficheiro <code style={{ color: '#6a5f52', background: '#0d0b09', padding: '1px 5px', borderRadius: 3 }}>.json</code> exportado anteriormente.
+                  Os dados existentes são actualizados; os novos são adicionados. Nada é eliminado.
+                </div>
+              </div>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6,
+                border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)',
+                color: '#c8963e', cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500,
+                flexShrink: 0, transition: 'all 0.15s',
+              }}>
+                <FileText size={13} /> Importar backup
+                <input type="file" accept=".json" onChange={handleImportFile} style={{ display: 'none' }} />
+              </label>
             </div>
-            <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.6, marginBottom: 14 }}>
-              Selecciona um ficheiro <code style={{ color: '#6a5f52', background: '#0d0b09', padding: '1px 5px', borderRadius: 3 }}>.json</code> exportado anteriormente.
-              Os dados existentes são actualizados; os novos são adicionados. Nada é eliminado.
-            </div>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#9a8f82',
-              cursor: 'pointer', fontFamily: FONT, fontSize: 12, transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)'; e.currentTarget.style.color = '#c8963e' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9a8f82' }}>
-              <FileText size={13} /> Escolher ficheiro…
-              <input type="file" accept=".json" onChange={handleImportFile} style={{ display: 'none' }} />
-            </label>
             {importPreview && (
               <div style={{ marginTop: 16, padding: 14, background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(200,150,62,0.2)' }}>
                 <div style={{ fontSize: 11, color: '#c8963e', marginBottom: 10, fontWeight: 500 }}>

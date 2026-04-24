@@ -1467,14 +1467,20 @@ function AdminPanel({ session }) {
 
 
   const adminFetch = async (action, method = 'GET', body = null) => {
-    const { data: { session: s } } = await supabase.auth.getSession()
-    const opts = {
-      method,
-      headers: { 'Authorization': `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (!s) return { error: 'Sessão expirada — faz login novamente.' }
+      const opts = {
+        method,
+        headers: { 'Authorization': `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+      }
+      if (body) opts.body = JSON.stringify(body)
+      const r = await fetch(`${EDGE_FN_URL}?action=${action}`, opts)
+      return r.json()
+    } catch (err) {
+      console.error('[adminFetch]', action, err)
+      return { error: err.message || 'Erro de rede' }
     }
-    if (body) opts.body = JSON.stringify(body)
-    const r = await fetch(`${EDGE_FN_URL}?action=${action}`, opts)
-    return r.json()
   }
 
   const handleCreate = async (e) => {
@@ -1489,9 +1495,13 @@ function AdminPanel({ session }) {
 
   const loadUsers = async () => {
     setLoadingU(true)
-    const data = await adminFetch('list')
-    if (data.users) setUsers(data.users)
-    setLoadingU(false)
+    try {
+      const data = await adminFetch('list')
+      if (data.users) setUsers(data.users)
+      else setMsg(`Erro ao carregar utilizadores: ${data.error ?? 'resposta inesperada'}`)
+    } finally {
+      setLoadingU(false)
+    }
   }
 
   useEffect(() => { loadUsers(); loadQuotes() }, [])
@@ -1523,10 +1533,13 @@ function AdminPanel({ session }) {
   const handleInvite = async (e) => {
     e.preventDefault()
     setInviting(true); setMsg('')
-    const data = await adminFetch('invite', 'POST', { email: inviteEmail, name: inviteName })
-    if (data.ok) { setMsg(`Convite enviado para ${inviteEmail}!`); setInviteEmail(''); setInviteName(''); loadUsers() }
-    else setMsg(`Erro: ${data.error}`)
-    setInviting(false)
+    try {
+      const data = await adminFetch('invite', 'POST', { email: inviteEmail, name: inviteName })
+      if (data.ok) { setMsg(`Convite enviado para ${inviteEmail}!`); setInviteEmail(''); setInviteName(''); loadUsers() }
+      else setMsg(`Erro: ${data.error}`)
+    } finally {
+      setInviting(false)
+    }
   }
 
   const toggleActive = async (u) => {

@@ -25,7 +25,8 @@
       "Bash(supabase --version)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__plugin_supabase_supabase__get_logs"
     ]
   }
 }

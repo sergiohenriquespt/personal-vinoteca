@@ -1445,7 +1445,8 @@ function LoginScreen() {
 function AdminPanel({ session }) {
   const [users,       setUsers]       = useState([])
   const [loadingU,    setLoadingU]    = useState(true)
-  const [tab,         setTab]         = useState('create')
+  const [adminTab,    setAdminTab]    = useState('utilizadores')
+  const [uTab,        setUTab]        = useState('criar')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName,  setInviteName]  = useState('')
   const [inviting,    setInviting]    = useState(false)
@@ -1646,267 +1647,278 @@ function AdminPanel({ session }) {
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
 
-      {/* Create / Invite form */}
-      <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
-        {/* Tab toggle */}
-        <div style={{ display: 'flex', gap: 1, marginBottom: 20, background: '#0d0b09', borderRadius: 7, padding: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
-          {[['create', 'Criar utilizador'], ['invite', 'Convidar por email']].map(([t, label]) => (
-            <button key={t} onClick={() => { setTab(t); setMsg('') }} style={{
-              flex: 1, padding: '7px 10px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: FONT,
-              fontSize: 11, fontWeight: 400, letterSpacing: '0.04em', transition: 'all 0.15s',
-              background: tab === t ? '#1e1b16' : 'transparent',
-              color: tab === t ? '#c8963e' : '#4a453f',
-            }}>{label}</button>
-          ))}
-        </div>
-
-        {tab === 'create' && (
-          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
-                <input value={createName} onChange={e => setCreateName(e.target.value)}
-                  style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
-                <input type="email" required value={createEmail} onChange={e => setCreateEmail(e.target.value)}
-                  style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Password temporária *</div>
-              <input type="password" required value={createPwd} onChange={e => setCreatePwd(e.target.value)}
-                style={{ ...S.inp, fontSize: 13 }} placeholder="Mínimo 6 caracteres" />
-              <div style={{ fontSize: 11, color: '#3a3530', marginTop: 5 }}>O utilizador será obrigado a alterar no primeiro login.</div>
-            </div>
-            {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
-            <button type="submit" disabled={creating}
-              style={{ alignSelf: 'flex-start', background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {creating ? 'A criar…' : <><UserCheck size={13} /> Criar utilizador</>}
-            </button>
-          </form>
-        )}
-
-        {tab === 'invite' && (
-          <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
-                <input value={inviteName} onChange={e => setInviteName(e.target.value)}
-                  style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
-                <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                  style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
-              </div>
-            </div>
-            {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
-            <button type="submit" disabled={inviting}
-              style={{ alignSelf: 'flex-start', background: 'none', color: '#c8963e', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 400, fontFamily: FONT, cursor: inviting ? 'not-allowed' : 'pointer', opacity: inviting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
-            </button>
-          </form>
-        )}
+      {/* Top-level admin tabs */}
+      <div style={{ display: 'flex', gap: 1, marginBottom: 24, background: '#0d0b09', borderRadius: 7, padding: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+        {[['utilizadores', 'Utilizadores'], ['segurança', 'Segurança'], ['frases', 'Frases']].map(([t, label]) => (
+          <button key={t} onClick={() => setAdminTab(t)} style={{
+            flex: 1, padding: '8px 10px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: FONT,
+            fontSize: 11, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s',
+            background: adminTab === t ? '#1e1b16' : 'transparent',
+            color: adminTab === t ? '#c8963e' : '#4a453f',
+          }}>{label}</button>
+        ))}
       </div>
 
-      {/* Backup */}
-      <div style={{ ...S.stat, padding: 20, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Download size={14} color="#c8963e" /> Cópia de segurança
+      {/* ── UTILIZADORES ── */}
+      {adminTab === 'utilizadores' && (
+        <div style={{ ...S.stat, padding: 24 }}>
+          {/* Sub-tabs */}
+          <div style={{ display: 'flex', gap: 1, marginBottom: 20, background: '#0d0b09', borderRadius: 6, padding: 2, border: '1px solid rgba(255,255,255,0.06)' }}>
+            {[['criar', 'Criar'], ['convidar', 'Convidar'], ['lista', `Lista (${users.length})`]].map(([t, label]) => (
+              <button key={t} onClick={() => { setUTab(t); setMsg('') }} style={{
+                flex: 1, padding: '6px 10px', borderRadius: 4, border: 'none', cursor: 'pointer', fontFamily: FONT,
+                fontSize: 11, fontWeight: 400, letterSpacing: '0.04em', transition: 'all 0.15s',
+                background: uTab === t ? 'rgba(200,150,62,0.12)' : 'transparent',
+                color: uTab === t ? '#c8963e' : '#4a453f',
+              }}>{label}</button>
+            ))}
           </div>
-          <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
-            Exporta todos os dados (vinhos, consumos, entradas, fornecedores) para um ficheiro JSON.
-          </div>
-        </div>
-        <button onClick={handleBackup} disabled={backingUp} style={{
-          display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6,
-          border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)',
-          color: '#c8963e', cursor: backingUp ? 'not-allowed' : 'pointer',
-          fontFamily: FONT, fontSize: 12, fontWeight: 500, flexShrink: 0,
-          opacity: backingUp ? 0.6 : 1, transition: 'all 0.15s',
-        }}>
-          <Download size={13} /> {backingUp ? 'A exportar…' : 'Exportar backup'}
-        </button>
-      </div>
 
-      {/* Importar backup */}
-      <div style={{ ...S.stat, padding: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <FileText size={14} color="#c8963e" />
-          <span style={{ fontSize: 13, color: '#e8dece' }}>Importar backup</span>
-        </div>
-        <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.6, marginBottom: 14 }}>
-          Selecciona um ficheiro <code style={{ color: '#6a5f52', background: '#0d0b09', padding: '1px 5px', borderRadius: 3 }}>.json</code> exportado anteriormente.
-          Os dados existentes são actualizados; os novos são adicionados. Nada é eliminado.
-        </div>
-
-        {/* File picker */}
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 6,
-          border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#9a8f82',
-          cursor: 'pointer', fontFamily: FONT, fontSize: 12, transition: 'all 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)'; e.currentTarget.style.color = '#c8963e' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9a8f82' }}>
-          <FileText size={13} /> Escolher ficheiro…
-          <input type="file" accept=".json" onChange={handleImportFile} style={{ display: 'none' }} />
-        </label>
-
-        {/* Preview */}
-        {importPreview && (
-          <div style={{ marginTop: 16, padding: 14, background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(200,150,62,0.2)' }}>
-            <div style={{ fontSize: 11, color: '#c8963e', marginBottom: 10, fontWeight: 500 }}>
-              Backup de {importPreview.exported_at ? new Date(importPreview.exported_at).toLocaleString('pt-PT') : '—'}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 14 }}>
-              {[
-                ['Vinhos',      importPreview.wines?.length       || 0],
-                ['Consumos',    importPreview.consumptions?.length || 0],
-                ['Entradas',    importPreview.entries?.length      || 0],
-                ['Fornecedores',importPreview.suppliers?.length    || 0],
-              ].map(([label, count]) => (
-                <div key={label} style={{ fontSize: 11, color: '#6a5f52' }}>
-                  <span style={{ color: '#e8dece', fontWeight: 500 }}>{count}</span> {label.toLowerCase()}
+          {uTab === 'criar' && (
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
+                  <input value={createName} onChange={e => setCreateName(e.target.value)}
+                    style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
                 </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
+                  <input type="email" required value={createEmail} onChange={e => setCreateEmail(e.target.value)}
+                    style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Password temporária *</div>
+                <input type="password" required value={createPwd} onChange={e => setCreatePwd(e.target.value)}
+                  style={{ ...S.inp, fontSize: 13 }} placeholder="Mínimo 6 caracteres" />
+                <div style={{ fontSize: 11, color: '#3a3530', marginTop: 5 }}>O utilizador será obrigado a alterar no primeiro login.</div>
+              </div>
+              {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
+              <button type="submit" disabled={creating}
+                style={{ alignSelf: 'flex-start', background: '#c8963e', color: '#0d0b09', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {creating ? 'A criar…' : <><UserCheck size={13} /> Criar utilizador</>}
+              </button>
+            </form>
+          )}
+
+          {uTab === 'convidar' && (
+            <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Nome</div>
+                  <input value={inviteName} onChange={e => setInviteName(e.target.value)}
+                    style={{ ...S.inp, fontSize: 13 }} placeholder="Nome do utilizador" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5 }}>Email *</div>
+                  <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    style={{ ...S.inp, fontSize: 13 }} placeholder="email@exemplo.pt" />
+                </div>
+              </div>
+              {msg && <div style={{ fontSize: 12, color: msg.startsWith('Erro') ? '#e87080' : '#68c880', padding: '8px 12px', background: msg.startsWith('Erro') ? 'rgba(232,112,128,0.08)' : 'rgba(104,200,128,0.08)', borderRadius: 5 }}>{msg}</div>}
+              <button type="submit" disabled={inviting}
+                style={{ alignSelf: 'flex-start', background: 'none', color: '#c8963e', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontWeight: 400, fontFamily: FONT, cursor: inviting ? 'not-allowed' : 'pointer', opacity: inviting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {inviting ? 'A enviar…' : <><Plus size={13} /> Enviar convite</>}
+              </button>
+            </form>
+          )}
+
+          {uTab === 'lista' && (
+            loadingU
+              ? <div style={{ fontSize: 13, color: '#3a3530', padding: '20px 0', textAlign: 'center' }}>A carregar…</div>
+              : users.map(u => {
+                const isSelf = u.id === session?.user?.id
+                return (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: u.active ? '#e8dece' : '#3a3530', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {u.name || '—'}
+                        {isSelf && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.15)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>TU</span>}
+                        {u.role === 'admin' && <span style={{ fontSize: 9, background: 'rgba(104,200,128,0.12)', color: '#68c880', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>ADMIN</span>}
+                        {!u.active && <span style={{ fontSize: 9, background: 'rgba(232,112,128,0.12)', color: '#e87080', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>INACTIVO</span>}
+                        {u.must_change_password && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.12)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>1º LOGIN</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{u.email}</div>
+                    </div>
+                    {!isSelf && (
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button onClick={() => toggleRole(u)} title={u.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
+                          style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.role === 'admin' ? '#68c880' : '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                          {u.role === 'admin' ? 'Admin ✓' : 'Admin'}
+                        </button>
+                        <button onClick={() => toggleActive(u)} title={u.active ? 'Desactivar' : 'Activar'}
+                          style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.active ? '#e87080' : '#68c880', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                          {u.active ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button onClick={() => deleteUser(u)} title="Eliminar utilizador"
+                          style={{ padding: '5px 8px', borderRadius: 4, border: '1px solid rgba(232,112,128,0.2)', background: 'none', color: '#e87080', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+          )}
+        </div>
+      )}
+
+      {/* ── SEGURANÇA ── */}
+      {adminTab === 'segurança' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Exportar */}
+          <div style={{ ...S.stat, padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Download size={14} color="#c8963e" /> Exportar backup
+              </div>
+              <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
+                Exporta todos os dados (vinhos, consumos, entradas, fornecedores) para um ficheiro JSON.
+              </div>
+            </div>
+            <button onClick={handleBackup} disabled={backingUp} style={{
+              display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6,
+              border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)',
+              color: '#c8963e', cursor: backingUp ? 'not-allowed' : 'pointer',
+              fontFamily: FONT, fontSize: 12, fontWeight: 500, flexShrink: 0,
+              opacity: backingUp ? 0.6 : 1, transition: 'all 0.15s',
+            }}>
+              <Download size={13} /> {backingUp ? 'A exportar…' : 'Exportar backup'}
+            </button>
+          </div>
+
+          {/* Importar */}
+          <div style={{ ...S.stat, padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <FileText size={14} color="#c8963e" />
+              <span style={{ fontSize: 13, color: '#e8dece' }}>Importar backup</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.6, marginBottom: 14 }}>
+              Selecciona um ficheiro <code style={{ color: '#6a5f52', background: '#0d0b09', padding: '1px 5px', borderRadius: 3 }}>.json</code> exportado anteriormente.
+              Os dados existentes são actualizados; os novos são adicionados. Nada é eliminado.
+            </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#9a8f82',
+              cursor: 'pointer', fontFamily: FONT, fontSize: 12, transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,62,0.3)'; e.currentTarget.style.color = '#c8963e' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9a8f82' }}>
+              <FileText size={13} /> Escolher ficheiro…
+              <input type="file" accept=".json" onChange={handleImportFile} style={{ display: 'none' }} />
+            </label>
+            {importPreview && (
+              <div style={{ marginTop: 16, padding: 14, background: '#0d0b09', borderRadius: 6, border: '1px solid rgba(200,150,62,0.2)' }}>
+                <div style={{ fontSize: 11, color: '#c8963e', marginBottom: 10, fontWeight: 500 }}>
+                  Backup de {importPreview.exported_at ? new Date(importPreview.exported_at).toLocaleString('pt-PT') : '—'}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 14 }}>
+                  {[
+                    ['Vinhos',      importPreview.wines?.length       || 0],
+                    ['Consumos',    importPreview.consumptions?.length || 0],
+                    ['Entradas',    importPreview.entries?.length      || 0],
+                    ['Fornecedores',importPreview.suppliers?.length    || 0],
+                  ].map(([label, count]) => (
+                    <div key={label} style={{ fontSize: 11, color: '#6a5f52' }}>
+                      <span style={{ color: '#e8dece', fontWeight: 500 }}>{count}</span> {label.toLowerCase()}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={handleImport} disabled={importing}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 6,
+                    border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.1)',
+                    color: '#c8963e', cursor: importing ? 'not-allowed' : 'pointer',
+                    fontFamily: FONT, fontSize: 12, fontWeight: 500,
+                    opacity: importing ? 0.6 : 1, transition: 'all 0.15s' }}>
+                  <Download size={13} style={{ transform: 'rotate(180deg)' }} />
+                  {importing ? 'A importar…' : 'Confirmar importação'}
+                </button>
+              </div>
+            )}
+            {importMsg && (
+              <div style={{ marginTop: 12, fontSize: 12,
+                color: importMsg.startsWith('✓') ? '#68c880' : '#e87080',
+                padding: '8px 12px', borderRadius: 5,
+                background: importMsg.startsWith('✓') ? 'rgba(104,200,128,0.08)' : 'rgba(232,112,128,0.08)',
+              }}>{importMsg}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── FRASES ── */}
+      {adminTab === 'frases' && (
+        <div style={{ ...S.stat, padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <h3 style={{ margin: 0, fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+              Frases · {quotes.filter(q => q.active).length} activas
+            </h3>
+            <div style={{ display: 'flex', gap: 1, background: '#0d0b09', borderRadius: 6, padding: 2, border: '1px solid rgba(255,255,255,0.06)' }}>
+              {[['list','Lista'],['add','Nova frase']].map(([t,l]) => (
+                <button key={t} onClick={() => setQTab(t)} style={{
+                  padding: '5px 12px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                  fontFamily: FONT, fontSize: 11,
+                  background: qTab === t ? 'rgba(200,150,62,0.12)' : 'transparent',
+                  color: qTab === t ? '#c8963e' : '#4a453f', transition: 'all 0.15s',
+                }}>{l}</button>
               ))}
             </div>
-            <button onClick={handleImport} disabled={importing}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 6,
-                border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.1)',
-                color: '#c8963e', cursor: importing ? 'not-allowed' : 'pointer',
-                fontFamily: FONT, fontSize: 12, fontWeight: 500,
-                opacity: importing ? 0.6 : 1, transition: 'all 0.15s' }}>
-              <Download size={13} style={{ transform: 'rotate(180deg)' }} />
-              {importing ? 'A importar…' : 'Confirmar importação'}
-            </button>
           </div>
-        )}
 
-        {importMsg && (
-          <div style={{ marginTop: 12, fontSize: 12,
-            color: importMsg.startsWith('✓') ? '#68c880' : '#e87080',
-            padding: '8px 12px', borderRadius: 5,
-            background: importMsg.startsWith('✓') ? 'rgba(104,200,128,0.08)' : 'rgba(232,112,128,0.08)',
-          }}>{importMsg}</div>
-        )}
-      </div>
-
-      {/* Frases */}
-      <div style={{ ...S.stat, padding: 24, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h3 style={{ margin: 0, fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
-            Frases · {quotes.filter(q => q.active).length} activas
-          </h3>
-          <div style={{ display: 'flex', gap: 1, background: '#0d0b09', borderRadius: 6, padding: 2, border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[['list','Lista'],['add','Nova frase']].map(([t,l]) => (
-              <button key={t} onClick={() => setQTab(t)} style={{
-                padding: '5px 12px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                fontFamily: FONT, fontSize: 11,
-                background: qTab === t ? 'rgba(200,150,62,0.12)' : 'transparent',
-                color: qTab === t ? '#c8963e' : '#4a453f', transition: 'all 0.15s',
-              }}>{l}</button>
-            ))}
-          </div>
-        </div>
-
-        {qTab === 'add' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <textarea value={newQuote.quote} onChange={e => setNewQuote(p => ({...p, quote: e.target.value}))}
-              placeholder="Escreve a frase aqui…"
-              style={{ ...S.inp, minHeight: 80, resize: 'vertical', fontSize: 13 }} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <input value={newQuote.author} onChange={e => setNewQuote(p => ({...p, author: e.target.value}))}
-                placeholder="Autor (opcional)" style={{ ...S.inp, fontSize: 12 }} />
-              <select value={newQuote.category} onChange={e => setNewQuote(p => ({...p, category: e.target.value}))}
-                style={{ ...S.inp, fontSize: 12, cursor: 'pointer' }}>
-                {['geral','consumo','entrada','tinto','branco','rosé','espumante'].map(c => (
-                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Btn variant="gold" onClick={saveQuote} disabled={savingQ || !newQuote.quote.trim()}>
-                {savingQ ? 'A guardar…' : 'Guardar frase'}
-              </Btn>
-            </div>
-          </div>
-        )}
-
-        {qTab === 'list' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-            {!quotesLoaded && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>A carregar…</p>}
-            {quotesLoaded && quotes.length === 0 && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>Nenhuma frase ainda.</p>}
-            {quotes.map(q => (
-              <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 7, background: q.active ? 'rgba(255,255,255,0.02)' : 'transparent', border: '1px solid rgba(255,255,255,0.04)', opacity: q.active ? 1 : 0.45 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: '0 0 3px', fontSize: 12, color: '#e8dece', lineHeight: 1.5 }}>"{q.quote}"</p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {q.author && <span style={{ fontSize: 11, color: '#6a5f52', fontStyle: 'italic' }}>— {q.author}</span>}
-                    <span style={{ fontSize: 10, color: '#4a453f', background: '#0d0b09', padding: '1px 6px', borderRadius: 3 }}>{q.category}</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                  <button onClick={() => toggleQuote(q)} title={q.active ? 'Desactivar' : 'Activar'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4,
-                      color: q.active ? '#68c880' : '#4a453f', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
-                    {q.active ? '●' : '○'}
-                  </button>
-                  <button onClick={() => deleteQuote(q)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4, color: '#3a3530', transition: 'all 0.15s', display: 'flex' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
-                    <Trash2 size={12} />
-                  </button>
-                </div>
+          {qTab === 'add' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <textarea value={newQuote.quote} onChange={e => setNewQuote(p => ({...p, quote: e.target.value}))}
+                placeholder="Escreve a frase aqui…"
+                style={{ ...S.inp, minHeight: 80, resize: 'vertical', fontSize: 13 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <input value={newQuote.author} onChange={e => setNewQuote(p => ({...p, author: e.target.value}))}
+                  placeholder="Autor (opcional)" style={{ ...S.inp, fontSize: 12 }} />
+                <select value={newQuote.category} onChange={e => setNewQuote(p => ({...p, category: e.target.value}))}
+                  style={{ ...S.inp, fontSize: 12, cursor: 'pointer' }}>
+                  {['geral','consumo','entrada','tinto','branco','rosé','espumante'].map(c => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Btn variant="gold" onClick={saveQuote} disabled={savingQ || !newQuote.quote.trim()}>
+                  {savingQ ? 'A guardar…' : 'Guardar frase'}
+                </Btn>
+              </div>
+            </div>
+          )}
 
-      {/* Users list */}
-      <div style={{ ...S.stat, padding: 24 }}>
-        <h3 style={{ margin: '0 0 20px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={14} /> Utilizadores ({users.length})
-        </h3>
-        {loadingU
-          ? <div style={{ fontSize: 13, color: '#3a3530', padding: '20px 0', textAlign: 'center' }}>A carregar…</div>
-          : users.map(u => {
-            const isSelf = u.id === session?.user?.id
-            return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: u.active ? '#e8dece' : '#3a3530', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {u.name || '—'}
-                    {isSelf && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.15)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>TU</span>}
-                    {u.role === 'admin' && <span style={{ fontSize: 9, background: 'rgba(104,200,128,0.12)', color: '#68c880', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>ADMIN</span>}
-                    {!u.active && <span style={{ fontSize: 9, background: 'rgba(232,112,128,0.12)', color: '#e87080', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>INACTIVO</span>}
-                    {u.must_change_password && <span style={{ fontSize: 9, background: 'rgba(200,150,62,0.12)', color: '#c8963e', padding: '2px 6px', borderRadius: 3, letterSpacing: '0.08em' }}>1º LOGIN</span>}
+          {qTab === 'list' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 400, overflowY: 'auto' }}>
+              {!quotesLoaded && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>A carregar…</p>}
+              {quotesLoaded && quotes.length === 0 && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>Nenhuma frase ainda.</p>}
+              {quotes.map(q => (
+                <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 7, background: q.active ? 'rgba(255,255,255,0.02)' : 'transparent', border: '1px solid rgba(255,255,255,0.04)', opacity: q.active ? 1 : 0.45 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 3px', fontSize: 12, color: '#e8dece', lineHeight: 1.5 }}>"{q.quote}"</p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {q.author && <span style={{ fontSize: 11, color: '#6a5f52', fontStyle: 'italic' }}>— {q.author}</span>}
+                      <span style={{ fontSize: 10, color: '#4a453f', background: '#0d0b09', padding: '1px 6px', borderRadius: 3 }}>{q.category}</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#4a453f', marginTop: 2 }}>{u.email}</div>
-                </div>
-                {!isSelf && (
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => toggleRole(u)} title={u.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
-                      style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.role === 'admin' ? '#68c880' : '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
-                      {u.role === 'admin' ? 'Admin ✓' : 'Admin'}
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button onClick={() => toggleQuote(q)} title={q.active ? 'Desactivar' : 'Activar'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4,
+                        color: q.active ? '#68c880' : '#4a453f', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                      {q.active ? '●' : '○'}
                     </button>
-                    <button onClick={() => toggleActive(u)} title={u.active ? 'Desactivar' : 'Activar'}
-                      style={{ padding: '5px 10px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: u.active ? '#e87080' : '#68c880', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
-                      {u.active ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button onClick={() => deleteUser(u)} title="Eliminar utilizador"
-                      style={{ padding: '5px 8px', borderRadius: 4, border: '1px solid rgba(232,112,128,0.2)', background: 'none', color: '#e87080', cursor: 'pointer', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                    <button onClick={() => deleteQuote(q)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4, color: '#3a3530', transition: 'all 0.15s', display: 'flex' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
                       <Trash2 size={12} />
                     </button>
                   </div>
-                )}
-              </div>
-            )
-          })
-        }
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

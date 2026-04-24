@@ -19,7 +19,13 @@
       "Read(//c/Users/sergiohenriques/.bun/**)",
       "Read(//c/Users/sergiohenriques/AppData/Roaming/npm//**)",
       "Bash(npm run *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(git -C /c/Users/sergiohenriques/GitHub/personal-vinoteca log --oneline --all)",
+      "Bash(grep -E \"\\\\\\\\.json$|^-\")",
+      "Bash(supabase --version)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

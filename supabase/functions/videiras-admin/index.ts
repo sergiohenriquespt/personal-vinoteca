@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { name: name || '' },
-      redirectTo: `${Deno.env.get('APP_URL') ?? 'https://videiras.pt'}/`,
+      redirectTo: 'https://videiras.pt/',
     })
     if (error) return json({ error: error.message }, origin, 500)
 

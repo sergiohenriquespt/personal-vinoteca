@@ -872,7 +872,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
           <label style={S.lbl}>Classificação Pessoal</label>
-          <div style={{ padding: '8px 0' }}><Stars value={f.personalRating} onChange={(v) => set('personalRating', v)} size={22} /></div>
+          <div style={{ padding: '8px 0', display: 'flex', alignItems: 'center', gap: 8 }}><Stars value={f.personalRating} onChange={(v) => set('personalRating', v)} size={22} /><span style={{ fontSize: 13, color: '#e8dece' }}>{f.personalRating || '—'}</span></div>
         </div>
         <div>
           <label style={S.lbl}>Rating Vivino</label>

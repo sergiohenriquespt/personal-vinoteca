@@ -871,6 +871,19 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
+          <label style={S.lbl}>Castas</label>
+          <input style={S.inp} value={f.castas} onChange={(e) => set('castas', e.target.value)} placeholder="Touriga Nacional, Aragonez…" />
+        </div>
+        <div>
+          <label style={S.lbl}>Teor Alcoólico (%)</label>
+          <input style={S.inp} type="number" step="0.1" min="0" max="25" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13.5" />
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0 16px' }} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div>
           <label style={S.lbl}>Classificação Pessoal</label>
           <div style={{ padding: '8px 0', display: 'flex', alignItems: 'center', gap: 8 }}><Stars value={f.personalRating} onChange={(v) => set('personalRating', v)} size={22} /><span style={{ fontSize: 13, color: '#e8dece' }}>{f.personalRating || '—'}</span></div>
         </div>
@@ -892,17 +905,6 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
               </a>
             )}
           </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
-        <div>
-          <label style={S.lbl}>Castas</label>
-          <input style={S.inp} value={f.castas} onChange={(e) => set('castas', e.target.value)} placeholder="Touriga Nacional, Aragonez…" />
-        </div>
-        <div>
-          <label style={S.lbl}>Teor Alcoólico (%)</label>
-          <input style={S.inp} type="number" step="0.1" min="0" max="25" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13.5" />
         </div>
       </div>
 
@@ -1052,13 +1054,8 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
           {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'],
             ...(wine.castas ? [['Castas', wine.castas]] : []),
             ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
+            ['Ano', wine.year || '—'],
           ].map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
-            </div>
-          ))}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '6px 0' }} />
-          {[['Ano', wine.year || '—']].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
             </div>

@@ -85,6 +85,7 @@ const wineFromDb = (r) => ({
   personalRating: parseFloat(r.personal_rating) || 0,
   vivinoRating: r.vivino_rating != null ? parseFloat(r.vivino_rating) : null,
   quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
+  castas: r.castas || '', alcoholContent: r.alcohol_content != null ? parseFloat(r.alcohol_content) : '',
 })
 const wineToDb = (w) => ({
   name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
@@ -92,6 +93,7 @@ const wineToDb = (w) => ({
   personal_rating: w.personalRating || 0,
   vivino_rating: w.vivinoRating ?? null, quantity: w.quantity ?? 0,
   photo: w.photo || null, notes: w.notes || '',
+  castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat(w.alcoholContent) : null,
 })
 const entryFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date,
@@ -704,7 +706,7 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
 function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '' }
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '' }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
@@ -881,6 +883,17 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         </div>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div>
+          <label style={S.lbl}>Castas</label>
+          <input style={S.inp} value={f.castas} onChange={(e) => set('castas', e.target.value)} placeholder="Touriga Nacional, Aragonez…" />
+        </div>
+        <div>
+          <label style={S.lbl}>Teor Alcoólico (%)</label>
+          <input style={S.inp} type="number" step="0.1" min="0" max="25" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13.5" />
+        </div>
+      </div>
+
       <div style={S.field}>
         <label style={S.lbl}>Notas</label>
         <textarea style={{ ...S.inp, minHeight: 64, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Notas de prova, potencial de guarda…" />
@@ -1024,7 +1037,10 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
 
       {tab === 'info' && (
         <div style={{ fontSize: 13, color: '#9a8f82' }}>
-          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'], ['Ano', wine.year || '—']].map(([k, v]) => (
+          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'], ['Ano', wine.year || '—'],
+            ...(wine.castas ? [['Castas', wine.castas]] : []),
+            ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
+          ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
             </div>

@@ -1272,6 +1272,7 @@ function WineListRow({ wine, onClick, isMobile }) {
         </div>
       </div>
       {!isMobile && <div style={{ width: 86, flexShrink: 0 }}><Badge type={wine.type} /></div>}
+      {!isMobile && <div style={{ width: 52, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.alcoholContent ? `${wine.alcoholContent}%` : '—'}</div>}
       {!isMobile && <div style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.year || '—'}</div>}
       {!isMobile && <div style={{ width: 76, flexShrink: 0 }}><Stars value={wine.personalRating} size={12} /></div>}
       <div style={{ width: isMobile ? 32 : 44, flexShrink: 0, textAlign: 'center' }}>
@@ -1322,6 +1323,7 @@ function WineListView({ wines, onWineClick, isMobile }) {
         <div style={{ width: isMobile ? 22 : 26, flexShrink: 0 }} />
         <ColHead label="Vinho"  col="name"           width={undefined} style={{ flex: 1 }} />
         {!isMobile && <ColHead label="Tipo"   col="type"           width={86} />}
+        {!isMobile && <ColHead label="Álcool" col="alcoholContent" width={52} align="center" />}
         {!isMobile && <ColHead label="Ano"    col="year"           width={44} align="center" />}
         {!isMobile && <ColHead label="Rating" col="personalRating" width={76} />}
         <ColHead label="Qtd."  col="quantity"       width={isMobile ? 32 : 44} align="center" />
@@ -2730,7 +2732,7 @@ export default function App() {
 
   const filtered = useMemo(() => wines.filter((w) => {
     const q = search.toLowerCase()
-    const ms = !q || [w.name, w.country, w.region].some((f) => f?.toLowerCase().includes(q))
+    const ms = !q || [w.name, w.country, w.region, w.castas].some((f) => f?.toLowerCase().includes(q))
     const stock = showNoStock || w.quantity > 0
     return ms && stock && (!filterType || w.type === filterType) && (!filterCountry || w.country === filterCountry) && (!filterRegion || w.region === filterRegion)
   }), [wines, search, filterType, filterCountry, filterRegion, showNoStock])

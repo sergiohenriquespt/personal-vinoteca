@@ -1051,10 +1051,9 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
 
       {tab === 'info' && (
         <div style={{ fontSize: 13, color: '#9a8f82' }}>
-          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'],
+          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'], ['Ano', wine.year || '—'],
             ...(wine.castas ? [['Castas', wine.castas]] : []),
             ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
-            ['Ano', wine.year || '—'],
           ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>

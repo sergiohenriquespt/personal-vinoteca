@@ -1037,10 +1037,16 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
 
       {tab === 'info' && (
         <div style={{ fontSize: 13, color: '#9a8f82' }}>
-          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'], ['Ano', wine.year || '—'],
+          {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'],
             ...(wine.castas ? [['Castas', wine.castas]] : []),
             ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
           ].map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '6px 0' }} />
+          {[['Ano', wine.year || '—']].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
             </div>
@@ -3013,7 +3019,7 @@ export default function App() {
         <ModalShell onClose={closeModal} isMobile={isMobile}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => deleteWine(liveWine.id)} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
           {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}

@@ -2886,9 +2886,9 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}>
               <KeyRound size={11} /> Terminar sessão
             </button>
-            <button onClick={() => setShowAbout(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: '6px 0 0', transition: 'color 0.15s' }}
+            <button onClick={() => setShowAbout(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: '8px 0 0', transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#c8963e'}
-              onMouseLeave={e => e.currentTarget.style.color = '#3a3530'}>
+              onMouseLeave={e => e.currentTarget.style.color = '#6a5f52'}>
               <Wine size={11} /> Quem é o Videiras?
             </button>
           </div>

@@ -1554,11 +1554,11 @@ function LoginScreen() {
   )
 }
 
-// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-function AdminPanel({ session }) {
+// ─── DEFINIÇÕES PANEL ─────────────────────────────────────────────────────────
+function DefinicoesPainel({ session, isAdmin }) {
   const [users,       setUsers]       = useState([])
   const [loadingU,    setLoadingU]    = useState(true)
-  const [adminTab,    setAdminTab]    = useState('utilizadores')
+  const [adminTab,    setAdminTab]    = useState(isAdmin ? 'utilizadores' : 'segurança')
   const [uTab,        setUTab]        = useState('criar')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName,  setInviteName]  = useState('')
@@ -1617,7 +1617,7 @@ function AdminPanel({ session }) {
     }
   }
 
-  useEffect(() => { loadUsers(); loadQuotes() }, [])
+  useEffect(() => { if (isAdmin) loadUsers(); loadQuotes() }, [])
 
   const loadQuotes = async () => {
     const { data } = await supabase.from('videiras_quotes').select('*').order('created_at', { ascending: false })
@@ -1627,7 +1627,7 @@ function AdminPanel({ session }) {
   const saveQuote = async () => {
     if (!newQuote.quote.trim()) return
     setSavingQ(true)
-    const { data } = await supabase.from('videiras_quotes').insert({ ...newQuote, active: true }).select().single()
+    const { data } = await supabase.from('videiras_quotes').insert({ ...newQuote, active: true, user_id: session.user.id }).select().single()
     if (data) { setQuotes(p => [data, ...p]); setNewQuote({ quote: '', author: '', category: 'geral' }) }
     setSavingQ(false)
   }
@@ -1775,7 +1775,7 @@ function AdminPanel({ session }) {
 
       {/* Top-level admin tabs */}
       <div style={{ display: 'flex', gap: 1, marginBottom: 24, background: '#0d0b09', borderRadius: 7, padding: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
-        {[['utilizadores', 'Utilizadores'], ['segurança', 'Segurança'], ['frases', 'Frases']].map(([t, label]) => (
+        {[...(isAdmin ? [['utilizadores', 'Utilizadores']] : []), ['segurança', 'Segurança'], ['frases', 'Frases']].map(([t, label]) => (
           <button key={t} onClick={() => setAdminTab(t)} style={{
             flex: 1, padding: '8px 10px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: FONT,
             fontSize: 11, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s',
@@ -2831,7 +2831,7 @@ export default function App() {
     { id: 'entradas',  icon: <LogIn size={15} />,     label: 'Entradas' },
     { id: 'consumos',  icon: <LogOut size={15} />,    label: 'Consumos' },
     { id: 'relatorios', icon: <FileText size={15} />, label: 'Relatórios' },
-    ...(isAdmin ? [{ id: 'admin', icon: <ShieldCheck size={15} />, label: 'Admin' }] : []),
+    { id: 'definicoes', icon: <Settings size={15} />, label: 'Definições' },
   ]
 
   if (authLoading) return (
@@ -2922,7 +2922,7 @@ export default function App() {
             </div>
           )}
           <h1 style={{ margin: 0, fontSize: 12, fontWeight: 400, color: '#6a6058', fontFamily: FONT, letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
-            {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos', relatorios: 'Relatórios', admin: 'Admin' }[view]}
+            {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos', relatorios: 'Relatórios', definicoes: 'Definições' }[view]}
           </h1>
           {view === 'adega' && (
             <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>
@@ -2940,7 +2940,7 @@ export default function App() {
         <div style={{ flex: 1, padding: isMobile ? 16 : 24, overflowY: 'auto', paddingBottom: isMobile ? 72 : 24 }}>
           {view === 'dashboard' && <Dashboard wines={wines} entries={entries} consumptions={consumptions} isMobile={isMobile} />}
           {view === 'relatorios' && <RelatoriosPanel wines={wines} consumptions={consumptions} entries={entries} isMobile={isMobile} />}
-          {view === 'admin' && isAdmin && <AdminPanel session={session} />}
+          {view === 'definicoes' && <DefinicoesPainel session={session} isAdmin={isAdmin} />}
 
           {view === 'adega' && (
             <>

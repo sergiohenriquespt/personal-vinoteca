@@ -282,7 +282,7 @@ function QuoteOverlay({ quote, onClose }) {
 
 // ─── INSTAGRAM IMAGE GENERATOR ────────────────────────────────────────────────
 async function generateInstagramImage(wine, tastingNotes = '') {
-  const W = 1080, H = 1080, PAD = 80
+  const W = 1080, H = 1350, PAD = 80
   const canvas = document.createElement('canvas')
   canvas.width = W; canvas.height = H
   const ctx = canvas.getContext('2d')
@@ -354,13 +354,16 @@ async function generateInstagramImage(wine, tastingNotes = '') {
     await new Promise(resolve => {
       const img = new Image()
       img.onload = () => {
-        const PW = 290, PH = 360, px = (W - PW) / 2
-        ctx.save(); ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.clip()
-        const scale = Math.max(PW/img.width, PH/img.height)
-        ctx.drawImage(img, px+(PW-img.width*scale)/2, y+(PH-img.height*scale)/2, img.width*scale, img.height*scale)
+        const PW = 520, PH = 650, px = (W - PW) / 2
+        const tc = getTC(wine.type)
+        ctx.save(); ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 16); ctx.clip()
+        ctx.fillStyle = tc.bg; ctx.fillRect(px, y, PW, PH)
+        const scale = Math.min(PW/img.width, PH/img.height)
+        const dw = img.width*scale, dh = img.height*scale
+        ctx.drawImage(img, px+(PW-dw)/2, y+(PH-dh)/2, dw, dh)
         ctx.restore()
         ctx.strokeStyle = 'rgba(200,150,62,0.25)'; ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.stroke()
+        ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 16); ctx.stroke()
         y += PH + 44; resolve()
       }
       img.onerror = () => resolve()
@@ -369,11 +372,11 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   } else {
     // Placeholder: coloured block with wine glass
     const tc = getTC(wine.type)
-    const PW = 290, PH = 360, px = (W - PW) / 2
+    const PW = 520, PH = 650, px = (W - PW) / 2
 
     // Background rounded rect
     ctx.save()
-    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.clip()
+    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 16); ctx.clip()
 
     // Solid fill with type colour
     ctx.fillStyle = tc.bg
@@ -388,7 +391,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
 
     // Subtle border
     ctx.strokeStyle = tc.fg + '40'; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.stroke()
+    ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 16); ctx.stroke()
 
     // Wine glass drawn directly in canvas (32×32 viewBox scaled to ~130px)
     const GS = 130, GX = (W - GS) / 2, GY = y + (PH - GS) / 2 - 10

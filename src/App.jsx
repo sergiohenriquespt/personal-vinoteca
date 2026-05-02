@@ -2620,6 +2620,7 @@ export default function App() {
   const [searchEntradas, setSearchEntradas] = useState('')
   const [searchConsumos, setSearchConsumos] = useState('')
   const [showAbout,      setShowAbout]      = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showNoStock,    setShowNoStock]    = useState(() => {
     try { return localStorage.getItem('videiras_showNoStock') !== 'false' } catch { return true }
   })
@@ -2926,6 +2927,13 @@ export default function App() {
           {view === 'adega' && (
             <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>
           )}
+          {isMobile && (
+            <button onClick={() => setShowMobileMenu(true)} style={{ background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', padding: 4, display: 'flex', transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#c8963e'}
+              onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}>
+              <UserCheck size={16} />
+            </button>
+          )}
         </div>
 
         {/* content */}
@@ -3107,6 +3115,24 @@ export default function App() {
 
       {activeQuote && <QuoteOverlay quote={activeQuote} onClose={() => setActiveQuote(null)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showMobileMenu && (
+        <div onMouseDown={() => setShowMobileMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 150, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end' }}>
+          <div onMouseDown={e => e.stopPropagation()} style={{ width: '100%', background: '#161310', borderTop: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px 16px 0 0', padding: '20px 24px 40px' }}>
+            <div style={{ width: 36, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 11, color: '#4a453f', marginBottom: 20, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>{profile?.email}</div>
+            <button onClick={() => { setShowMobileMenu(false); handleLogout() }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', fontSize: 14, fontFamily: FONT, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#e87080'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6a5f52'}>
+              <KeyRound size={15} /> Terminar sessão
+            </button>
+            <button onClick={() => { setShowMobileMenu(false); setShowAbout(true) }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', fontSize: 14, fontFamily: FONT, padding: '12px 0', transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#c8963e'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6a5f52'}>
+              <Wine size={15} /> Quem é o Videiras?
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODALS */}
       {modal && (

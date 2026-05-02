@@ -477,6 +477,72 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   }, 'image/png')
 }
 
+// ─── ABOUT MODAL ──────────────────────────────────────────────────────────────
+function calcAge() {
+  const born = new Date(1975, 0, 5)
+  const today = new Date()
+  let age = today.getFullYear() - born.getFullYear()
+  const m = today.getMonth() - born.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < born.getDate())) age--
+  return age
+}
+
+function AboutModal({ onClose }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 380, background: '#161310',
+        border: '1px solid rgba(200,150,62,0.2)', borderRadius: 16,
+        padding: '32px 28px 28px', boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', alignSelf: 'flex-end', marginTop: -16, marginRight: -12,
+          background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', padding: 4,
+          display: 'flex',
+        }}><X size={16} /></button>
+
+        <img
+          src="/videiras.png"
+          alt="Sérgio Henriques"
+          style={{
+            width: 96, height: 96, borderRadius: '50%', objectFit: 'cover',
+            border: '2px solid rgba(200,150,62,0.35)', marginBottom: 20,
+          }}
+        />
+
+        <div style={{ fontSize: 15, color: '#e8dece', fontWeight: 400, marginBottom: 4, fontFamily: FONT }}>
+          Sérgio Henriques, {calcAge()} anos
+        </div>
+        <div style={{ fontSize: 10, color: '#c8963e', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 20, fontFamily: FONT }}>
+          o Videiras
+        </div>
+
+        <p style={{ fontSize: 13, color: '#9a8f82', lineHeight: 1.7, margin: 0, fontFamily: FONT }}>
+          "Videiras" é uma alcunha com história: uma noite de copos na Queima das Fitas de Aveiro
+          que terminou com o Sérgio no meio de umas vinhas. A alcunha ficou; os detalhes dessa noite
+          ficaram estrategicamente esquecidos.
+        </p>
+        <p style={{ fontSize: 13, color: '#9a8f82', lineHeight: 1.7, margin: '14px 0 0', fontFamily: FONT }}>
+          Décadas depois, a relação com o vinho evoluiu de acidente geográfico para paixão declarada
+          — desenvolvida a sério durante a pandemia. A Bairrada é a região favorita, e o Videiras
+          nasceu para saber exactamente o que há em casa sem ter de abrir a garrafeira.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── SHARE MODAL ──────────────────────────────────────────────────────────────
 function ShareModal({ wine, session, onClose }) {
   const [email,      setEmail]      = React.useState('')
@@ -2538,6 +2604,7 @@ export default function App() {
   const [activeQuote,    setActiveQuote]    = useState(null)
   const [searchEntradas, setSearchEntradas] = useState('')
   const [searchConsumos, setSearchConsumos] = useState('')
+  const [showAbout,      setShowAbout]      = useState(false)
   const [showNoStock,    setShowNoStock]    = useState(() => {
     try { return localStorage.getItem('videiras_showNoStock') !== 'false' } catch { return true }
   })
@@ -2819,6 +2886,11 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}>
               <KeyRound size={11} /> Terminar sessão
             </button>
+            <button onClick={() => setShowAbout(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#3a3530', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: '6px 0 0', transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#c8963e'}
+              onMouseLeave={e => e.currentTarget.style.color = '#3a3530'}>
+              <Wine size={11} /> Quem é o Videiras?
+            </button>
           </div>
         </div>
       )}
@@ -3023,6 +3095,7 @@ export default function App() {
       )}
 
       {activeQuote && <QuoteOverlay quote={activeQuote} onClose={() => setActiveQuote(null)} />}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       {/* MODALS */}
       {modal && (

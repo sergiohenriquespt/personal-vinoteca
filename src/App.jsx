@@ -2025,30 +2025,36 @@ function DefinicoesPainel({ session, isAdmin }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 400, overflowY: 'auto' }}>
               {!quotesLoaded && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>A carregar…</p>}
               {quotesLoaded && quotes.length === 0 && <p style={{ color: '#4a453f', fontSize: 12, textAlign: 'center' }}>Nenhuma frase ainda.</p>}
-              {quotes.map(q => (
-                <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 7, background: q.active ? 'rgba(255,255,255,0.02)' : 'transparent', border: '1px solid rgba(255,255,255,0.04)', opacity: q.active ? 1 : 0.45 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: '0 0 3px', fontSize: 12, color: '#e8dece', lineHeight: 1.5 }}>"{q.quote}"</p>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      {q.author && <span style={{ fontSize: 11, color: '#6a5f52', fontStyle: 'italic' }}>— {q.author}</span>}
-                      <span style={{ fontSize: 10, color: '#4a453f', background: '#0d0b09', padding: '1px 6px', borderRadius: 3 }}>{q.category}</span>
+              {quotes.map(q => {
+                const isOwn = q.user_id === session.user.id
+                return (
+                  <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 7, background: q.active ? 'rgba(255,255,255,0.02)' : 'transparent', border: '1px solid rgba(255,255,255,0.04)', opacity: q.active ? 1 : 0.45 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: '0 0 3px', fontSize: 12, color: '#e8dece', lineHeight: 1.5 }}>"{q.quote}"</p>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {q.author && <span style={{ fontSize: 11, color: '#6a5f52', fontStyle: 'italic' }}>— {q.author}</span>}
+                        <span style={{ fontSize: 10, color: '#4a453f', background: '#0d0b09', padding: '1px 6px', borderRadius: 3 }}>{q.category}</span>
+                        {!isOwn && <span style={{ fontSize: 9, color: '#3a3530', letterSpacing: '0.06em', textTransform: 'uppercase' }}>partilhada</span>}
+                      </div>
                     </div>
+                    {isOwn && (
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <button onClick={() => toggleQuote(q)} title={q.active ? 'Desactivar' : 'Activar'}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4,
+                            color: q.active ? '#68c880' : '#4a453f', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
+                          {q.active ? '●' : '○'}
+                        </button>
+                        <button onClick={() => deleteQuote(q)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4, color: '#3a3530', transition: 'all 0.15s', display: 'flex' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => toggleQuote(q)} title={q.active ? 'Desactivar' : 'Activar'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4,
-                        color: q.active ? '#68c880' : '#4a453f', fontSize: 11, fontFamily: FONT, transition: 'all 0.15s' }}>
-                      {q.active ? '●' : '○'}
-                    </button>
-                    <button onClick={() => deleteQuote(q)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 4, color: '#3a3530', transition: 'all 0.15s', display: 'flex' }}
-                      onMouseEnter={e => { e.currentTarget.style.color = '#e87080'; e.currentTarget.style.background = 'rgba(232,112,128,0.1)' }}
-                      onMouseLeave={e => { e.currentTarget.style.color = '#3a3530'; e.currentTarget.style.background = 'none' }}>
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

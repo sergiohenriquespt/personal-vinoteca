@@ -2876,10 +2876,6 @@ export default function App() {
           </nav>
 
           <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ fontSize: 11, color: '#3a3530', lineHeight: 1.8, fontWeight: 300, marginBottom: 10 }}>
-              <div>{fmtInt(wines.length)} referências</div>
-              <div>{fmtInt(wines.reduce((s, w) => s + w.quantity, 0))} garrafas</div>
-            </div>
             <div style={{ fontSize: 11, color: '#4a453f', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email}</div>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: 0, transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#e87080'}

@@ -2476,6 +2476,22 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
 
   const topWines = [...inStock].sort((a, b) => totalV(b) - totalV(a)).slice(0, 5)
 
+  // Resumo de gastos
+  const now = new Date()
+  const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const thisYearKey  = String(now.getFullYear())
+  const spentThisMonth = entries.filter(e => e.date.startsWith(thisMonthKey)).reduce((s, e) => s + e.price * e.quantity, 0)
+  const spentThisYear  = entries.filter(e => e.date.startsWith(thisYearKey)).reduce((s, e) => s + e.price * e.quantity, 0)
+  const spentTotal     = entries.reduce((s, e) => s + e.price * e.quantity, 0)
+  const last12 = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '')
+    const spent = entries.filter(e => e.date.startsWith(key)).reduce((s, e) => s + e.price * e.quantity, 0)
+    return { key, label, spent, isCurrent: key === thisMonthKey }
+  })
+  const maxMonthSpend = Math.max(...last12.map(m => m.spent), 1)
+
   // Consumos por região
   const byRegion = consumptions.reduce((acc, c) => {
     const w = wines.find(x => x.id === c.wineId)
@@ -2511,6 +2527,36 @@ function Dashboard({ wines, entries, consumptions, isMobile }) {
             <div style={{ fontSize: 26, fontWeight: 300, color: c, fontFamily: FONT, letterSpacing: '-0.03em' }}>{v}</div>
           </div>
         ))}
+      </div>
+
+      {/* Resumo de Gastos */}
+      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Resumo de gastos</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { l: 'Este mês',   v: fmt(spentThisMonth) },
+            { l: thisYearKey,  v: fmt(spentThisYear)  },
+            { l: 'Histórico',  v: fmt(spentTotal)     },
+          ].map(({ l, v }) => (
+            <div key={l} style={{ background: '#0d0b09', borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
+              <div style={{ fontSize: 18, fontWeight: 300, color: '#c8963e', fontFamily: FONT, letterSpacing: '-0.02em' }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 64 }}>
+          {last12.map(({ key, label, spent, isCurrent }) => (
+            <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+              <div title={fmt(spent)} style={{
+                width: '100%', borderRadius: '2px 2px 0 0',
+                background: isCurrent ? '#c8963e' : 'rgba(200,150,62,0.25)',
+                height: spent > 0 ? `${Math.max((spent / maxMonthSpend) * 52, 3)}px` : '2px',
+                transition: 'height 0.3s ease',
+              }} />
+              <div style={{ fontSize: 8.5, color: isCurrent ? '#c8963e' : '#3a3530', letterSpacing: '0.02em', textTransform: 'uppercase' }}>{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Garrafas por tipo + Por país em stock */}

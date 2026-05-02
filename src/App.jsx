@@ -535,7 +535,7 @@ function AboutModal({ onClose }) {
         </p>
         <p style={{ fontSize: 13, color: '#9a8f82', lineHeight: 1.7, margin: '14px 0 0', fontFamily: FONT }}>
           Décadas depois, a relação com o vinho evoluiu de acidente geográfico para paixão declarada
-          — desenvolvida a sério durante a pandemia. A Bairrada é a região favorita, e o Videiras
+          — desenvolvida a sério durante a pandemia. A Bairrada é a região favorita, e esta aplicação
           nasceu para saber exactamente o que há em casa sem ter de abrir a garrafeira.
         </p>
       </div>

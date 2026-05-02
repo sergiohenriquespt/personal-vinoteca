@@ -1003,7 +1003,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose }) {
+function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session }) {
   const [f, setF] = useState(entry
     ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price) }
     : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
@@ -1024,7 +1024,7 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
           onChange={(v) => set('supplier', v)}
           options={list}
           onAdd={async (v) => {
-              await supabase.from('videiras_suppliers').insert({ name: v })
+              await supabase.from('videiras_suppliers').insert({ name: v, user_id: session.user.id })
               setSuppliers?.((p) => [...p, v].sort((a, b) => a.localeCompare(b, 'pt')))
               set('supplier', v)
             }}
@@ -3140,8 +3140,8 @@ export default function App() {
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
-          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} />}
-          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} session={session} />}
+          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} session={session} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
           {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} />}
         </ModalShell>

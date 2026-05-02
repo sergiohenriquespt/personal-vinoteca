@@ -521,7 +521,7 @@ function AboutModal({ onClose }) {
         }}><X size={16} /></button>
 
         <img
-          src="/videiras.png"
+          src="/videiras.jpg"
           alt="Sérgio Henriques"
           style={{
             width: 96, height: 96, borderRadius: '50%', objectFit: 'cover',

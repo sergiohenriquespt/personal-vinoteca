@@ -240,6 +240,7 @@ function PhotoLightbox({ src: imgSrc, onClose }) {
 }
 
 function QuoteOverlay({ quote, onClose }) {
+  const bdRef = useRef(false)
   useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h)
@@ -247,7 +248,10 @@ function QuoteOverlay({ quote, onClose }) {
   }, [onClose])
   if (!quote) return null
   return (
-    <div onClick={onClose} style={{
+    <div
+      onMouseDown={e => { bdRef.current = e.target === e.currentTarget }}
+      onClick={e => { if (bdRef.current && e.target === e.currentTarget) onClose() }}
+      style={{
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -488,6 +492,7 @@ function calcAge() {
 }
 
 function AboutModal({ onClose }) {
+  const bdRef = useRef(false)
   useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h)
@@ -495,7 +500,10 @@ function AboutModal({ onClose }) {
   }, [onClose])
 
   return (
-    <div onClick={onClose} style={{
+    <div
+      onMouseDown={e => { bdRef.current = e.target === e.currentTarget }}
+      onClick={e => { if (bdRef.current && e.target === e.currentTarget) onClose() }}
+      style={{
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
@@ -545,6 +553,7 @@ function AboutModal({ onClose }) {
 
 // ─── SHARE MODAL ──────────────────────────────────────────────────────────────
 function ShareModal({ wine, session, onClose }) {
+  const bdRef = React.useRef(false)
   const [email,      setEmail]      = React.useState('')
   const [sending,    setSending]    = React.useState(false)
   const [msg,        setMsg]        = React.useState('')
@@ -577,7 +586,10 @@ function ShareModal({ wine, session, onClose }) {
   }
 
   return (
-    <div onClick={onClose} style={{
+    <div
+      onMouseDown={e => { bdRef.current = e.target === e.currentTarget }}
+      onClick={e => { if (bdRef.current && e.target === e.currentTarget) onClose() }}
+      style={{
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
@@ -650,8 +662,11 @@ function ShareModal({ wine, session, onClose }) {
 }
 
 function ModalShell({ onClose, children, isMobile }) {
+  const bdRef = useRef(false)
   return (
-    <div onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    <div
+      onMouseDown={e => { bdRef.current = e.target === e.currentTarget }}
+      onClick={e => { if (bdRef.current && e.target === e.currentTarget) onClose() }}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)',
         display: 'flex', zIndex: 100, backdropFilter: 'blur(4px)',
         ...(isMobile

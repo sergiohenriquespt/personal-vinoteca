@@ -2906,7 +2906,10 @@ export default function App() {
   const liveWine = activeWine ? wines.find((w) => w.id === activeWine.id) || activeWine : null
 
   const isAdmin = profile?.role === 'admin'
-  const handleLogout = async () => { await supabase.auth.signOut() }
+  const handleLogout = async () => {
+    if (!window.confirm('Tens a certeza que pretendes terminar a sessão?')) return
+    await supabase.auth.signOut()
+  }
 
   const NAV = [
     { id: 'dashboard', icon: <BarChart3 size={15} />, label: 'Dashboard' },

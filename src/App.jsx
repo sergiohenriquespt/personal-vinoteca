@@ -6,6 +6,7 @@ import {
   LayoutGrid, List, Camera, ImageOff, Eye, EyeOff, ExternalLink,
   ShieldCheck, Users, UserCheck, UserX, Settings, KeyRound,
   FileText, Download, FileSpreadsheet, TrendingUp, Share2, Send, Instagram,
+  Volume2, VolumeX,
 } from 'lucide-react'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
@@ -493,11 +494,22 @@ function calcAge() {
 
 function AboutModal({ onClose }) {
   const bdRef = useRef(false)
+  const audioRef = useRef(null)
+  const [muted, setMuted] = useState(false)
+
   useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.volume = 0.35
+    audio.play().catch(() => {})
+    return () => { audio.pause(); audio.currentTime = 0 }
+  }, [])
 
   return (
     <div
@@ -508,6 +520,7 @@ function AboutModal({ onClose }) {
       background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
+      <audio ref={audioRef} src="/videiras.mp3" loop />
       <div onClick={e => e.stopPropagation()} style={{
         width: '100%', maxWidth: 380, background: '#161310',
         border: '1px solid rgba(200,150,62,0.2)', borderRadius: 16,
@@ -546,6 +559,24 @@ function AboutModal({ onClose }) {
           — desenvolvida a sério durante a pandemia. A Bairrada é a região favorita, e esta aplicação
           nasceu para saber exactamente o que há em casa sem ter de abrir a garrafeira.
         </p>
+        <button
+          onClick={() => {
+            const audio = audioRef.current
+            if (!audio) return
+            audio.muted = !audio.muted
+            setMuted(audio.muted)
+          }}
+          style={{
+            marginTop: 24, display: 'flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+            borderRadius: 6, color: muted ? '#3a3530' : '#c8963e',
+            fontSize: 11, fontFamily: FONT, letterSpacing: '0.1em',
+            transition: 'color 0.2s',
+          }}
+        >
+          {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+          {muted ? 'som desligado' : 'som ligado'}
+        </button>
       </div>
     </div>
   )

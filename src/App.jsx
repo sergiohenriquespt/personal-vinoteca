@@ -2909,12 +2909,22 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', color: '#e8dece', fontFamily: FONT }}>
       {loading && (
-        <div style={{ position: 'fixed', inset: 0, background: '#0d0b09', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 200, gap: 16 }}>
-          <div style={{ width: 40, height: 40, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wine size={20} color="#c8963e" />
+        <>
+          <style>{`
+            @keyframes vt-spin { to { transform: rotate(360deg); } }
+            @keyframes vt-pulse { 0%,100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+            @keyframes vt-fade { 0%,100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+          `}</style>
+          <div style={{ position: 'fixed', inset: 0, background: '#0d0b09', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 200, gap: 20 }}>
+            <div style={{ position: 'relative', width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, border: '2px solid rgba(200,150,62,0.15)', borderTopColor: '#c8963e', animation: 'vt-spin 1.1s linear infinite' }} />
+              <div style={{ width: 40, height: 40, background: 'rgba(200,150,62,0.10)', border: '1px solid rgba(200,150,62,0.25)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'vt-pulse 2s ease-in-out infinite' }}>
+                <Wine size={20} color="#c8963e" />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.2em', textTransform: 'uppercase', animation: 'vt-fade 1.8s ease-in-out infinite' }}>A carregar adega…</div>
           </div>
-          <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.2em', textTransform: 'uppercase' }}>A carregar adega…</div>
-        </div>
+        </>
       )}
 
       {/* SIDEBAR (desktop only) */}

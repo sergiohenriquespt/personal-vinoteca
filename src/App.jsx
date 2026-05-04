@@ -456,11 +456,27 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   // Stars
   if (wine.personalRating) {
     ctx.font = '400 34px Outfit, system-ui, sans-serif'; ctx.textAlign = 'left'
-    const sw = ctx.measureText('★').width + 10
+    const starW = ctx.measureText('★').width
+    const sw = starW + 10
     const sx = (W - (5*sw - 10)) / 2
     for (let i = 0; i < 5; i++) {
-      ctx.fillStyle = i < wine.personalRating ? '#d4a843' : '#252018'
-      ctx.fillText('★', sx + i*sw, y)
+      const x = sx + i*sw
+      const full = wine.personalRating >= i + 1
+      const half = !full && wine.personalRating >= i + 0.5
+      ctx.fillStyle = '#252018'
+      ctx.fillText('★', x, y)
+      if (full) {
+        ctx.fillStyle = '#d4a843'
+        ctx.fillText('★', x, y)
+      } else if (half) {
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(x, y - 40, starW / 2, 48)
+        ctx.clip()
+        ctx.fillStyle = '#d4a843'
+        ctx.fillText('★', x, y)
+        ctx.restore()
+      }
     }
     ctx.textAlign = 'center'
   }

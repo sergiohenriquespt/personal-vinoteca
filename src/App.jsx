@@ -78,6 +78,19 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
+const BOTTLE_SIZES = [
+  { ml: 375,   label: '375 ml — Meia Garrafa' },
+  { ml: 750,   label: '750 ml — Standard' },
+  { ml: 1500,  label: '1,5 L — Magnum' },
+  { ml: 3000,  label: '3 L — Double Magnum' },
+  { ml: 4500,  label: '4,5 L — Rehoboam' },
+  { ml: 6000,  label: '6 L — Imperiale' },
+  { ml: 9000,  label: '9 L — Salmanazar' },
+  { ml: 12000, label: '12 L — Balthazar' },
+  { ml: 15000, label: '15 L — Nabucodonosor' },
+]
+const bottleLabel = (ml) => BOTTLE_SIZES.find((b) => b.ml === ml)?.label ?? `${ml} ml`
+
 // ─── DB MAPPING ───────────────────────────────────────────────────────────────
 const wineFromDb = (r) => ({
   id: r.id, name: r.name, type: r.type, country: r.country, region: r.region,
@@ -88,6 +101,7 @@ const wineFromDb = (r) => ({
   quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
   castas: r.castas || '', alcoholContent: r.alcohol_content != null ? parseFloat(r.alcohol_content) : '',
   producer: r.producer || '', winemaker: r.winemaker || '',
+  bottleSize: r.bottle_size || 750,
 })
 const wineToDb = (w) => ({
   name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
@@ -97,6 +111,7 @@ const wineToDb = (w) => ({
   photo: w.photo || null, notes: w.notes || '',
   castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat((w.alcoholContent + '').replace(',', '.')) : null,
   producer: w.producer || null, winemaker: w.winemaker || null,
+  bottle_size: w.bottleSize || 750,
 })
 const entryFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date,
@@ -849,7 +864,7 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
 function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '' }
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '', bottleSize: 750 }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
@@ -1038,6 +1053,12 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
             <label style={S.lbl}>Teor Alcoólico (%)</label>
             <input style={S.inp} type="text" inputMode="decimal" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13,5" />
           </div>
+          <div>
+            <label style={S.lbl}>Formato</label>
+            <select style={{ ...S.inp, cursor: 'pointer' }} value={f.bottleSize} onChange={(e) => set('bottleSize', parseInt(e.target.value))}>
+              {BOTTLE_SIZES.map((b) => <option key={b.ml} value={b.ml}>{b.label}</option>)}
+            </select>
+          </div>
         </div>
       )}
 
@@ -1217,6 +1238,7 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
             ...(wine.winemaker ? [['Enólogo', wine.winemaker]] : []),
             ...(wine.castas ? [['Castas', wine.castas]] : []),
             ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
+            ['Formato', bottleLabel(wine.bottleSize || 750)],
           ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span>{k}</span><span style={{ color: '#e8dece' }}>{v}</span>
@@ -2739,9 +2761,10 @@ export default function App() {
 
   const [view,           setView]           = useState('dashboard')
   const [search,         setSearch]         = useState('')
-  const [filterType,     setFilterType]     = useState('')
-  const [filterCountry,  setFilterCountry]  = useState('')
-  const [filterRegion,   setFilterRegion]   = useState('')
+  const [filterType,       setFilterType]       = useState('')
+  const [filterCountry,    setFilterCountry]    = useState('')
+  const [filterRegion,     setFilterRegion]     = useState('')
+  const [filterBottleSize, setFilterBottleSize] = useState('')
   const [listMode,       setListMode]       = useState('list')
   const [sidebarOpen,    setSidebarOpen]    = useState(true)
   const [isMobile,       setIsMobile]       = useState(false)
@@ -2947,12 +2970,18 @@ export default function App() {
     closeModal()
   }
 
+  const bottleSizesInUse = useMemo(() => [...new Set(wines.map((w) => w.bottleSize || 750))].sort((a, b) => a - b), [wines])
+
   const filtered = useMemo(() => wines.filter((w) => {
     const q = search.toLowerCase()
-    const ms = !q || [w.name, w.country, w.region, w.castas].some((f) => f?.toLowerCase().includes(q))
+    const ms = !q || [w.name, w.country, w.region, w.castas, w.producer, w.winemaker].some((f) => f?.toLowerCase().includes(q))
     const stock = showNoStock || w.quantity > 0
-    return ms && stock && (!filterType || w.type === filterType) && (!filterCountry || w.country === filterCountry) && (!filterRegion || w.region === filterRegion)
-  }), [wines, search, filterType, filterCountry, filterRegion, showNoStock])
+    return ms && stock
+      && (!filterType       || w.type === filterType)
+      && (!filterCountry    || w.country === filterCountry)
+      && (!filterRegion     || w.region === filterRegion)
+      && (!filterBottleSize || (w.bottleSize || 750) === filterBottleSize)
+  }), [wines, search, filterType, filterCountry, filterRegion, filterBottleSize, showNoStock])
 
   const liveWine = activeWine ? wines.find((w) => w.id === activeWine.id) || activeWine : null
 
@@ -3101,6 +3130,12 @@ export default function App() {
                 {!isMobile && <FilterSelect placeholder="Países" value={filterCountry} onChange={(v) => { setFilterCountry(v); setFilterRegion('') }} options={allCountries} onAdd={addCountry} />}
                 {!isMobile && filterCountry && (
                   <FilterSelect placeholder="Regiões" value={filterRegion} onChange={setFilterRegion} options={countriesRegions[filterCountry] || []} onAdd={(v) => addRegionToCountry(filterCountry, v)} />
+                )}
+                {!isMobile && bottleSizesInUse.length > 1 && (
+                  <select style={{ ...S.inp, width: 'auto', fontSize: 12, cursor: 'pointer' }} value={filterBottleSize} onChange={(e) => setFilterBottleSize(e.target.value ? parseInt(e.target.value) : '')}>
+                    <option value="">Todos os formatos</option>
+                    {bottleSizesInUse.map((ml) => <option key={ml} value={ml}>{bottleLabel(ml)}</option>)}
+                  </select>
                 )}
                 <button
                   onClick={() => setShowNoStock((p) => !p)}

@@ -87,6 +87,7 @@ const wineFromDb = (r) => ({
   vivinoRating: r.vivino_rating != null ? parseFloat(r.vivino_rating) : null,
   quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
   castas: r.castas || '', alcoholContent: r.alcohol_content != null ? parseFloat(r.alcohol_content) : '',
+  producer: r.producer || '', winemaker: r.winemaker || '',
 })
 const wineToDb = (w) => ({
   name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
@@ -94,7 +95,8 @@ const wineToDb = (w) => ({
   personal_rating: w.personalRating || 0,
   vivino_rating: w.vivinoRating ?? null, quantity: w.quantity ?? 0,
   photo: w.photo || null, notes: w.notes || '',
-  castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat(w.alcoholContent) : null,
+  castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat((w.alcoholContent + '').replace(',', '.')) : null,
+  producer: w.producer || null, winemaker: w.winemaker || null,
 })
 const entryFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date,
@@ -847,10 +849,11 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
 function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '' }
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '' }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
+  const [showTech, setShowTech] = useState(!!(wine && (wine.producer || wine.winemaker || wine.castas || (wine.alcoholContent !== '' && wine.alcoholContent != null))))
   const [newType,    setNewType]    = useState('')
   const [addingType, setAddingType] = useState(false)
 
@@ -910,9 +913,21 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
     setTypes((p) => [...p, t]); set('type', t); setNewType(''); setAddingType(false)
   }
 
+  const secHead = (label, collapsible, open, onToggle) => (
+    <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0 10px', cursor: collapsible ? 'pointer' : 'default', userSelect: 'none' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: collapsible ? '#9a8f82' : '#6a6058', textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
+        {collapsible && <span style={{ display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', fontSize: 8 }}>▶</span>}
+        {label}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+    </div>
+  )
+
   return (
     <>
       <ModalHeader title={wine ? 'Editar Vinho' : 'Novo Vinho'} onClose={onClose} />
+
+      {secHead('Identificação', false)}
 
       <div style={S.field}><label style={S.lbl}>Fotografia</label><PhotoUpload value={f.photo} onChange={(v) => set('photo', v)} /></div>
 
@@ -931,7 +946,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         }
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', columnGap: 12, rowGap: 14, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', columnGap: 12, rowGap: 12, marginBottom: 12 }}>
         <div>
           <label style={S.lbl}>Tipo</label>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -972,6 +987,11 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
             onAdd={addRegionForm}
           />
         </div>
+      </div>
+
+      {secHead('Preços & Stock', false)}
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', columnGap: 12, rowGap: 12, marginBottom: 12 }}>
         <div>
           <label style={S.lbl}>Preço de Compra (€)</label>
           <input style={S.inp} value={f.purchasePrice} onChange={(e) => set('purchasePrice', e.target.value)} placeholder="0,00" />
@@ -998,18 +1018,30 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         {!wine && <div><label style={S.lbl}>Quantidade Inicial</label><input style={S.inp} type="number" value={f.quantity} onChange={(e) => set('quantity', e.target.value)} min={0} /></div>}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
-        <div>
-          <label style={S.lbl}>Castas</label>
-          <input style={S.inp} value={f.castas} onChange={(e) => set('castas', e.target.value)} placeholder="Touriga Nacional, Aragonez…" />
-        </div>
-        <div>
-          <label style={S.lbl}>Teor Alcoólico (%)</label>
-          <input style={S.inp} type="number" step="0.1" min="0" max="25" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13.5" />
-        </div>
-      </div>
+      {secHead('Detalhes Técnicos', true, showTech, () => setShowTech((p) => !p))}
 
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0 16px' }} />
+      {showTech && (
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', columnGap: 12, rowGap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={S.lbl}>Produtor</label>
+            <input style={S.inp} value={f.producer} onChange={(e) => set('producer', e.target.value)} placeholder="Ex: Quinta do Crasto" />
+          </div>
+          <div>
+            <label style={S.lbl}>Enólogo</label>
+            <input style={S.inp} value={f.winemaker} onChange={(e) => set('winemaker', e.target.value)} placeholder="Ex: Domingos Soares Franco" />
+          </div>
+          <div>
+            <label style={S.lbl}>Castas</label>
+            <input style={S.inp} value={f.castas} onChange={(e) => set('castas', e.target.value)} placeholder="Touriga Nacional, Aragonez…" />
+          </div>
+          <div>
+            <label style={S.lbl}>Teor Alcoólico (%)</label>
+            <input style={S.inp} type="text" inputMode="decimal" value={f.alcoholContent} onChange={(e) => set('alcoholContent', e.target.value)} placeholder="13,5" />
+          </div>
+        </div>
+      )}
+
+      {secHead('Avaliação', false)}
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div>
@@ -1019,7 +1051,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         <div>
           <label style={S.lbl}>Rating Vivino</label>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input style={{ ...S.inp, flex: 1 }} value={f.vivinoRating} onChange={(e) => set('vivinoRating', e.target.value)} placeholder="0.0" />
+            <input style={{ ...S.inp, flex: 1 }} value={f.vivinoRating} onChange={(e) => set('vivinoRating', e.target.value)} placeholder="0,0" />
             {f.name && (
               <a
                 href={`https://www.vivino.com/search/wines?q=${encodeURIComponent([f.name, f.year].filter(Boolean).join(' '))}`}
@@ -1181,6 +1213,8 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
       {tab === 'info' && (
         <div style={{ fontSize: 13, color: '#9a8f82' }}>
           {[['Tipo', wine.type], ['País', wine.country], ['Região', wine.region || '—'], ['Ano', wine.year || '—'],
+            ...(wine.producer ? [['Produtor', wine.producer]] : []),
+            ...(wine.winemaker ? [['Enólogo', wine.winemaker]] : []),
             ...(wine.castas ? [['Castas', wine.castas]] : []),
             ...(wine.alcoholContent !== '' && wine.alcoholContent != null ? [['Teor Alcoólico', `${wine.alcoholContent}%`]] : []),
           ].map(([k, v]) => (

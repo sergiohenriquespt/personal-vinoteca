@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import { applyPlugin } from 'jspdf-autotable'
+applyPlugin(jsPDF)
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
 const FONT = "'Outfit', system-ui, sans-serif"

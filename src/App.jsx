@@ -1441,13 +1441,38 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, 
 // ─── WINE LIST VIEW ───────────────────────────────────────────────────────────
 function WineListRow({ wine, onClick, isMobile }) {
   const [lightbox, setLightbox] = React.useState(false)
+  const [hoveredPhoto, setHoveredPhoto] = React.useState(false)
   return (
     <div onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, padding: isMobile ? '10px 14px' : '9px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s', opacity: wine.quantity === 0 ? 0.45 : 1 }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
       {lightbox && <PhotoLightbox src={wine.photo} onClose={(e) => { setLightbox(false) }} />}
-      <WineThumb photo={wine.photo} type={wine.type} size={isMobile ? 22 : 26} onClick={wine.photo ? (e) => { e.stopPropagation(); setLightbox(true) } : undefined} />
+      {!isMobile && wine.photo
+        ? <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 4, flexShrink: 0, width: 26, height: 39 }}
+            onMouseEnter={() => setHoveredPhoto(true)}
+            onMouseLeave={() => setHoveredPhoto(false)}>
+            <img src={wine.photo} alt="" onClick={(e) => { e.stopPropagation(); setLightbox(true) }}
+              style={{ width: 26, height: 39, objectFit: 'cover', display: 'block',
+                cursor: 'zoom-in',
+                transform: hoveredPhoto ? 'scale(1.07)' : 'scale(1)',
+                transition: 'transform 0.2s ease' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)',
+              opacity: hoveredPhoto ? 1 : 0, transition: 'opacity 0.2s ease',
+              pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', bottom: 5, right: 5,
+                background: 'rgba(13,11,9,0.65)', borderRadius: 3, padding: 3,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8963e" strokeWidth="2">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        : <WineThumb photo={wine.photo} type={wine.type} size={isMobile ? 22 : 26} onClick={wine.photo ? (e) => { e.stopPropagation(); setLightbox(true) } : undefined} />}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 400, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wine.name}</div>
         <div style={{ fontSize: 11, color: '#9a8f82', marginTop: 1 }}>
@@ -1523,6 +1548,7 @@ function WineListView({ wines, onWineClick, isMobile }) {
 
 // ─── WINE GRID VIEW ───────────────────────────────────────────────────────────
 function WineGridView({ wines, onWineClick }) {
+  const [hoveredPhoto, setHoveredPhoto] = useState(null)
   if (wines.length === 0) return <div style={{ textAlign: 'center', padding: '80px 0', color: '#4a453f' }}><Wine size={40} style={{ marginBottom: 12, opacity: 0.25 }} /><p style={{ fontSize: 14 }}>Nenhum vinho encontrado.</p></div>
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px,1fr))', gap: 14 }}>
@@ -1533,7 +1559,30 @@ function WineGridView({ wines, onWineClick }) {
             style={{ background: '#1e1b16', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', opacity: w.quantity === 0 ? 0.45 : 1 }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(200,150,62,0.25)' }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
-            {w.photo ? <img src={w.photo} alt={w.name} style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
+            {w.photo
+              ? <div style={{ position: 'relative', overflow: 'hidden' }}>
+                  <img src={w.photo} alt={w.name}
+                    style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block',
+                      cursor: 'zoom-in',
+                      transform: hoveredPhoto === w.id ? 'scale(1.07)' : 'scale(1)',
+                      transition: 'transform 0.2s ease' }}
+                    onMouseEnter={() => setHoveredPhoto(w.id)}
+                    onMouseLeave={() => setHoveredPhoto(null)} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)',
+                    opacity: hoveredPhoto === w.id ? 1 : 0, transition: 'opacity 0.2s ease',
+                    pointerEvents: 'none' }}>
+                    <div style={{ position: 'absolute', bottom: 5, right: 5,
+                      background: 'rgba(13,11,9,0.65)', borderRadius: 3, padding: 3,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8963e" strokeWidth="2">
+                        <polyline points="15 3 21 3 21 9"/>
+                        <polyline points="9 21 3 21 3 15"/>
+                        <line x1="21" y1="3" x2="14" y2="10"/>
+                        <line x1="3" y1="21" x2="10" y2="14"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               : <div style={{ height: 4, background: c.fg, opacity: 0.6 }} />}
             <div style={{ padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

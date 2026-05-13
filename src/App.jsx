@@ -8,6 +8,9 @@ import {
   FileText, Download, FileSpreadsheet, TrendingUp, Share2, Send, Instagram,
   Volume2, VolumeX,
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 // ─── FONT: Outfit is loaded globally via index.html ───────────────────────────
 const FONT = "'Outfit', system-ui, sans-serif"
@@ -2307,62 +2310,48 @@ function StockReport({ wines, isMobile }) {
   }, {})
 
   const exportXLS = () => {
-    const run = () => {
-      const rows = [['Stock da Adega — ' + new Date().toLocaleDateString('pt-PT')],[],
-        ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
-        ...inStock.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
-        [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
-      const ws = window.XLSX.utils.aoa_to_sheet(rows)
-      ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
-      ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
-      const wb = window.XLSX.utils.book_new(); window.XLSX.utils.book_append_sheet(wb,ws,'Stock')
-      window.XLSX.writeFile(wb, `videiras-stock-${new Date().toISOString().slice(0,10)}.xlsx`)
-    }
-    if (window.XLSX) { run(); return }
-    const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    s.onload = run; document.head.appendChild(s)
+    const rows = [['Stock da Adega — ' + new Date().toLocaleDateString('pt-PT')],[],
+      ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
+      ...inStock.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
+      [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stock')
+    XLSX.writeFile(wb, `videiras-stock-${new Date().toISOString().slice(0,10)}.xlsx`)
   }
 
   const exportPDF = () => {
-    const run = () => {
-      const { jsPDF } = window.jspdf
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const W = 210, margin = 18
-      pdfDrawHeader(doc, W, margin, 'RELATÓRIO DE STOCK')
-      const kpis = [{label:'REFERÊNCIAS',value:pdfInt(totalRefs)},{label:'GARRAFAS',value:pdfInt(totalBottles)},{label:'VALOR TOTAL',value:pdfFmt(totalValue)}]
-      const kpiW = (W - margin*2 - 8) / 3
-      kpis.forEach((k, i) => {
-        const x = margin + i * (kpiW + 4)
-        doc.setFillColor(22,19,16); doc.setDrawColor(50,44,38); doc.setLineWidth(0.3)
-        doc.roundedRect(x, 33, kpiW, 16, 2, 2, 'FD')
-        doc.setFontSize(6); doc.setTextColor(100,90,75); doc.text(k.label, x+kpiW/2, 38.5, {align:'center'})
-        doc.setFontSize(10); doc.setTextColor(232,222,206); doc.setFont('helvetica','bold')
-        doc.text(k.value, x+kpiW/2, 44.5, {align:'center'}); doc.setFont('helvetica','normal')
-      })
-      let yy = 55; doc.setFontSize(6.5); doc.setTextColor(200,150,62); doc.text('POR TIPO', margin, yy); yy += 4
-      Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).forEach(([type, d]) => {
-        doc.setFillColor(22,19,16); doc.roundedRect(margin, yy, W-margin*2, 6.5, 1, 1, 'F')
-        doc.setTextColor(200,180,150); doc.setFontSize(7); doc.text(type, margin+4, yy+4.3)
-        doc.setTextColor(150,140,120); doc.text(pdfInt(d.refs)+' ref · '+pdfInt(d.bottles)+' garrafas', margin+45, yy+4.3)
-        doc.setTextColor(200,150,62); doc.text(pdfFmt(d.value), W-margin-4, yy+4.3, {align:'right'}); yy += 8
-      })
-      doc.autoTable({
-        ...pdfAutoTableOptions(margin), startY: yy + 4,
-        head: [['Nome','Tipo','País / Região','Ano','Qtd','Preço','Total']],
-        body: inStock.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity,w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
-        foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
-        willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
-        didDrawPage: () => pdfFooter(doc, W, margin),
-      })
-      pdfAddPageNumbers(doc, W, margin)
-      doc.save(`videiras-stock-${new Date().toISOString().slice(0,10)}.pdf`)
-    }
-    if (window.jspdf) { run(); return }
-    const s1 = document.createElement('script'); s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-    s1.onload = () => {
-      const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
-      s2.onload = run; document.head.appendChild(s2)
-    }; document.head.appendChild(s1)
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const W = 210, margin = 18
+    pdfDrawHeader(doc, W, margin, 'RELATÓRIO DE STOCK')
+    const kpis = [{label:'REFERÊNCIAS',value:pdfInt(totalRefs)},{label:'GARRAFAS',value:pdfInt(totalBottles)},{label:'VALOR TOTAL',value:pdfFmt(totalValue)}]
+    const kpiW = (W - margin*2 - 8) / 3
+    kpis.forEach((k, i) => {
+      const x = margin + i * (kpiW + 4)
+      doc.setFillColor(22,19,16); doc.setDrawColor(50,44,38); doc.setLineWidth(0.3)
+      doc.roundedRect(x, 33, kpiW, 16, 2, 2, 'FD')
+      doc.setFontSize(6); doc.setTextColor(100,90,75); doc.text(k.label, x+kpiW/2, 38.5, {align:'center'})
+      doc.setFontSize(10); doc.setTextColor(232,222,206); doc.setFont('helvetica','bold')
+      doc.text(k.value, x+kpiW/2, 44.5, {align:'center'}); doc.setFont('helvetica','normal')
+    })
+    let yy = 55; doc.setFontSize(6.5); doc.setTextColor(200,150,62); doc.text('POR TIPO', margin, yy); yy += 4
+    Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).forEach(([type, d]) => {
+      doc.setFillColor(22,19,16); doc.roundedRect(margin, yy, W-margin*2, 6.5, 1, 1, 'F')
+      doc.setTextColor(200,180,150); doc.setFontSize(7); doc.text(type, margin+4, yy+4.3)
+      doc.setTextColor(150,140,120); doc.text(pdfInt(d.refs)+' ref · '+pdfInt(d.bottles)+' garrafas', margin+45, yy+4.3)
+      doc.setTextColor(200,150,62); doc.text(pdfFmt(d.value), W-margin-4, yy+4.3, {align:'right'}); yy += 8
+    })
+    doc.autoTable({
+      ...pdfAutoTableOptions(margin), startY: yy + 4,
+      head: [['Nome','Tipo','País / Região','Ano','Qtd','Preço','Total']],
+      body: inStock.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity,w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
+      foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
+      willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
+      didDrawPage: () => pdfFooter(doc, W, margin),
+    })
+    pdfAddPageNumbers(doc, W, margin)
+    doc.save(`videiras-stock-${new Date().toISOString().slice(0,10)}.pdf`)
   }
 
   return (
@@ -2462,62 +2451,48 @@ function CatalogoReport({ wines, isMobile }) {
   const maxTypeBottles = Math.max(...Object.values(byType).map(d => d.bottles), 1)
 
   const exportXLS = () => {
-    const run = () => {
-      const rows = [['Catálogo Completo — ' + new Date().toLocaleDateString('pt-PT')],[],
-        ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
-        ...allWines.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
-        [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
-      const ws = window.XLSX.utils.aoa_to_sheet(rows)
-      ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
-      ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
-      const wb = window.XLSX.utils.book_new(); window.XLSX.utils.book_append_sheet(wb,ws,'Catálogo')
-      window.XLSX.writeFile(wb, `videiras-catalogo-${new Date().toISOString().slice(0,10)}.xlsx`)
-    }
-    if (window.XLSX) { run(); return }
-    const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    s.onload = run; document.head.appendChild(s)
+    const rows = [['Catálogo Completo — ' + new Date().toLocaleDateString('pt-PT')],[],
+      ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
+      ...allWines.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
+      [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Catálogo')
+    XLSX.writeFile(wb, `videiras-catalogo-${new Date().toISOString().slice(0,10)}.xlsx`)
   }
 
   const exportPDF = () => {
-    const run = () => {
-      const { jsPDF } = window.jspdf
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const W = 210, margin = 18
-      pdfDrawHeader(doc, W, margin, 'CATÁLOGO COMPLETO')
-      const kpis = [{label:'REFERÊNCIAS',value:pdfInt(totalRefs)},{label:'GARRAFAS',value:pdfInt(totalBottles)},{label:'VALOR TOTAL',value:pdfFmt(totalValue)}]
-      const kpiW = (W - margin*2 - 8) / 3
-      kpis.forEach((k, i) => {
-        const x = margin + i * (kpiW + 4)
-        doc.setFillColor(22,19,16); doc.setDrawColor(50,44,38); doc.setLineWidth(0.3)
-        doc.roundedRect(x, 33, kpiW, 16, 2, 2, 'FD')
-        doc.setFontSize(6); doc.setTextColor(100,90,75); doc.text(k.label, x+kpiW/2, 38.5, {align:'center'})
-        doc.setFontSize(10); doc.setTextColor(232,222,206); doc.setFont('helvetica','bold')
-        doc.text(k.value, x+kpiW/2, 44.5, {align:'center'}); doc.setFont('helvetica','normal')
-      })
-      let yy = 55; doc.setFontSize(6.5); doc.setTextColor(200,150,62); doc.text('POR TIPO', margin, yy); yy += 4
-      Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).forEach(([type, d]) => {
-        doc.setFillColor(22,19,16); doc.roundedRect(margin, yy, W-margin*2, 6.5, 1, 1, 'F')
-        doc.setTextColor(200,180,150); doc.setFontSize(7); doc.text(type, margin+4, yy+4.3)
-        doc.setTextColor(150,140,120); doc.text(pdfInt(d.refs)+' ref · '+pdfInt(d.bottles)+' garrafas', margin+45, yy+4.3)
-        doc.setTextColor(200,150,62); doc.text(pdfFmt(d.value), W-margin-4, yy+4.3, {align:'right'}); yy += 8
-      })
-      doc.autoTable({
-        ...pdfAutoTableOptions(margin), startY: yy + 4,
-        head: [['Nome','Tipo','País / Região','Ano','Qtd','Preço','Total']],
-        body: allWines.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity>0?w.quantity:'—',w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
-        foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
-        willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
-        didDrawPage: () => pdfFooter(doc, W, margin),
-      })
-      pdfAddPageNumbers(doc, W, margin)
-      doc.save(`videiras-catalogo-${new Date().toISOString().slice(0,10)}.pdf`)
-    }
-    if (window.jspdf) { run(); return }
-    const s1 = document.createElement('script'); s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-    s1.onload = () => {
-      const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
-      s2.onload = run; document.head.appendChild(s2)
-    }; document.head.appendChild(s1)
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const W = 210, margin = 18
+    pdfDrawHeader(doc, W, margin, 'CATÁLOGO COMPLETO')
+    const kpis = [{label:'REFERÊNCIAS',value:pdfInt(totalRefs)},{label:'GARRAFAS',value:pdfInt(totalBottles)},{label:'VALOR TOTAL',value:pdfFmt(totalValue)}]
+    const kpiW = (W - margin*2 - 8) / 3
+    kpis.forEach((k, i) => {
+      const x = margin + i * (kpiW + 4)
+      doc.setFillColor(22,19,16); doc.setDrawColor(50,44,38); doc.setLineWidth(0.3)
+      doc.roundedRect(x, 33, kpiW, 16, 2, 2, 'FD')
+      doc.setFontSize(6); doc.setTextColor(100,90,75); doc.text(k.label, x+kpiW/2, 38.5, {align:'center'})
+      doc.setFontSize(10); doc.setTextColor(232,222,206); doc.setFont('helvetica','bold')
+      doc.text(k.value, x+kpiW/2, 44.5, {align:'center'}); doc.setFont('helvetica','normal')
+    })
+    let yy = 55; doc.setFontSize(6.5); doc.setTextColor(200,150,62); doc.text('POR TIPO', margin, yy); yy += 4
+    Object.entries(byType).sort((a,b) => b[1].bottles - a[1].bottles).forEach(([type, d]) => {
+      doc.setFillColor(22,19,16); doc.roundedRect(margin, yy, W-margin*2, 6.5, 1, 1, 'F')
+      doc.setTextColor(200,180,150); doc.setFontSize(7); doc.text(type, margin+4, yy+4.3)
+      doc.setTextColor(150,140,120); doc.text(pdfInt(d.refs)+' ref · '+pdfInt(d.bottles)+' garrafas', margin+45, yy+4.3)
+      doc.setTextColor(200,150,62); doc.text(pdfFmt(d.value), W-margin-4, yy+4.3, {align:'right'}); yy += 8
+    })
+    doc.autoTable({
+      ...pdfAutoTableOptions(margin), startY: yy + 4,
+      head: [['Nome','Tipo','País / Região','Ano','Qtd','Preço','Total']],
+      body: allWines.map(w => [w.name,w.type,[w.region,w.country].filter(Boolean).join(' · '),w.year||'—',w.quantity>0?w.quantity:'—',w.purchasePrice>0?pdfFmt(w.purchasePrice):'—',(w.purchasePrice*w.quantity)>0?pdfFmt(w.purchasePrice*w.quantity):'—']),
+      foot: [['','','','',pdfInt(totalBottles),'',pdfFmt(totalValue)]],
+      willDrawPage: (data) => { if (data.pageNumber > 1) { doc.setFillColor(13,11,9); doc.rect(0,0,W,297,'F') } },
+      didDrawPage: () => pdfFooter(doc, W, margin),
+    })
+    pdfAddPageNumbers(doc, W, margin)
+    doc.save(`videiras-catalogo-${new Date().toISOString().slice(0,10)}.pdf`)
   }
 
   return (

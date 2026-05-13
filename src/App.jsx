@@ -1513,8 +1513,9 @@ function WineListView({ wines, onWineClick, isMobile }) {
       if (av == null && bv == null) return 0
       if (av == null) return 1
       if (bv == null) return -1
-      if (typeof av === 'string') return av.localeCompare(bv, 'pt') * sortDir
-      return (av - bv) * sortDir
+      const cmp = typeof av === 'string' ? av.localeCompare(bv, 'pt') * sortDir : (av - bv) * sortDir
+      if (cmp !== 0) return cmp
+      return (a.year ?? 0) - (b.year ?? 0)
     })
   }, [wines, sortKey, sortDir])
 
@@ -2311,13 +2312,27 @@ function StockReport({ wines, isMobile }) {
   }, {})
 
   const exportXLS = () => {
-    const rows = [['Stock da Adega — ' + new Date().toLocaleDateString('pt-PT')],[],
-      ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
-      ...inStock.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
-      [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
+    const rows = [
+      ['Stock da Adega — ' + new Date().toLocaleDateString('pt-PT')],
+      [],
+      ['Nome','Tipo','País','Região','Ano','Produtor','Enólogo','Castas','Álcool (%)','Formato (ml)','Qtd','Preço Compra (€)','Preço Mercado (€)','Valor Total (€)','Rating Pessoal','Rating Vivino','Notas'],
+      ...inStock.map(w => [
+        w.name, w.type, w.country, w.region||'', w.year||'',
+        w.producer||'', w.winemaker||'', w.castas||'',
+        w.alcoholContent!==''&&w.alcoholContent!=null ? Number(w.alcoholContent) : '',
+        w.bottleSize||750, w.quantity,
+        Number(w.purchasePrice.toFixed(2)),
+        w.marketPrice!=null ? Number(w.marketPrice.toFixed(2)) : '',
+        Number((w.purchasePrice*w.quantity).toFixed(2)),
+        w.personalRating||'', w.vivinoRating!=null ? w.vivinoRating : '',
+        w.notes||'',
+      ]),
+      [],
+      ['TOTAL','','','','','','','','','',totalBottles,'','',Number(totalValue.toFixed(2)),'','',''],
+    ]
     const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
-    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
+    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:22},{wch:22},{wch:22},{wch:10},{wch:12},{wch:6},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:40}]
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:16}}]
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Stock')
     XLSX.writeFile(wb, `videiras-stock-${new Date().toISOString().slice(0,10)}.xlsx`)
   }
@@ -2452,13 +2467,27 @@ function CatalogoReport({ wines, isMobile }) {
   const maxTypeBottles = Math.max(...Object.values(byType).map(d => d.bottles), 1)
 
   const exportXLS = () => {
-    const rows = [['Catálogo Completo — ' + new Date().toLocaleDateString('pt-PT')],[],
-      ['Nome','Tipo','País','Região','Ano','Qtd','Preço Unit. (€)','Valor Total (€)'],
-      ...allWines.map(w => [w.name,w.type,w.country,w.region,w.year||'—',w.quantity,Number(w.purchasePrice.toFixed(2)),Number((w.purchasePrice*w.quantity).toFixed(2))]),
-      [],['TOTAL','','','','',totalBottles,'',Number(totalValue.toFixed(2))]]
+    const rows = [
+      ['Catálogo Completo — ' + new Date().toLocaleDateString('pt-PT')],
+      [],
+      ['Nome','Tipo','País','Região','Ano','Produtor','Enólogo','Castas','Álcool (%)','Formato (ml)','Qtd','Preço Compra (€)','Preço Mercado (€)','Valor Total (€)','Rating Pessoal','Rating Vivino','Notas'],
+      ...allWines.map(w => [
+        w.name, w.type, w.country, w.region||'', w.year||'',
+        w.producer||'', w.winemaker||'', w.castas||'',
+        w.alcoholContent!==''&&w.alcoholContent!=null ? Number(w.alcoholContent) : '',
+        w.bottleSize||750, w.quantity,
+        Number(w.purchasePrice.toFixed(2)),
+        w.marketPrice!=null ? Number(w.marketPrice.toFixed(2)) : '',
+        Number((w.purchasePrice*w.quantity).toFixed(2)),
+        w.personalRating||'', w.vivinoRating!=null ? w.vivinoRating : '',
+        w.notes||'',
+      ]),
+      [],
+      ['TOTAL','','','','','','','','','',totalBottles,'','',Number(totalValue.toFixed(2)),'','',''],
+    ]
     const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:6},{wch:16},{wch:16}]
-    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}]
+    ws['!cols'] = [{wch:40},{wch:12},{wch:12},{wch:18},{wch:6},{wch:22},{wch:22},{wch:22},{wch:10},{wch:12},{wch:6},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:40}]
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:16}}]
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Catálogo')
     XLSX.writeFile(wb, `videiras-catalogo-${new Date().toISOString().slice(0,10)}.xlsx`)
   }

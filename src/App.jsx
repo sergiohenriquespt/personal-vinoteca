@@ -24,6 +24,21 @@ const EDGE_FN_URL       = `${SUPA_URL}/functions/v1/videiras-admin`
 const SHARE_FN_URL      = `${SUPA_URL}/functions/v1/videiras-share`
 const ESTIMATE_FN_URL   = `${SUPA_URL}/functions/v1/videiras-estimate`
 
+// ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
+const PHOTO_BUCKET = 'wine-photos'
+const isStorageUrl = (url) => url && !url.startsWith('data:')
+const uploadWinePhoto = async (file, userId) => {
+  const path = `${userId}/${crypto.randomUUID()}`
+  const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, file, { contentType: file.type })
+  if (error) throw error
+  return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl
+}
+const deleteWinePhoto = async (url) => {
+  if (!isStorageUrl(url)) return
+  const path = url.split(`/${PHOTO_BUCKET}/`)[1]
+  if (path) await supabase.storage.from(PHOTO_BUCKET).remove([decodeURIComponent(path)])
+}
+
 // ─── TYPE COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
   Tinto:     { fg: '#e87080', bg: '#2d0a12' },
@@ -773,13 +788,31 @@ function ModalHeader({ title, subtitle, onClose }) {
 }
 
 // ─── PHOTO UPLOAD ─────────────────────────────────────────────────────────────
-function PhotoUpload({ value, onChange }) {
+function PhotoUpload({ value, onChange, userId }) {
   const ref = useRef()
+  const [uploading, setUploading] = useState(false)
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    onChange(await readFileAsBase64(file))
+    e.target.value = ''
+    if (!userId) { onChange(await readFileAsBase64(file)); return }
+    setUploading(true)
+    try {
+      if (isStorageUrl(value)) await deleteWinePhoto(value)
+      const url = await uploadWinePhoto(file, userId)
+      onChange(url)
+    } catch (err) {
+      alert('Erro ao carregar foto: ' + err.message)
+    }
+    setUploading(false)
   }
+
+  const handleRemove = async () => {
+    if (isStorageUrl(value)) await deleteWinePhoto(value)
+    onChange(null)
+  }
+
   return (
     <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
       {value
@@ -789,10 +822,10 @@ function PhotoUpload({ value, onChange }) {
           </div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
-        <Btn variant="ghost" onClick={() => ref.current?.click()}>
-          <Camera size={13} />{value ? 'Alterar foto' : 'Adicionar foto'}
+        <Btn variant="ghost" onClick={() => ref.current?.click()} disabled={uploading}>
+          <Camera size={13} />{uploading ? 'A carregar…' : value ? 'Alterar foto' : 'Adicionar foto'}
         </Btn>
-        {value && <Btn variant="danger" onClick={() => onChange(null)} style={{ padding: '4px 10px', fontSize: 12 }}><ImageOff size={12} />Remover</Btn>}
+        {value && !uploading && <Btn variant="danger" onClick={handleRemove} style={{ padding: '4px 10px', fontSize: 12 }}><ImageOff size={12} />Remover</Btn>}
       </div>
     </div>
   )
@@ -967,7 +1000,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
       {secHead('Identificação', false)}
 
-      <div style={S.field}><label style={S.lbl}>Fotografia</label><PhotoUpload value={f.photo} onChange={(v) => set('photo', v)} /></div>
+      <div style={S.field}><label style={S.lbl}>Fotografia</label><PhotoUpload value={f.photo} onChange={(v) => set('photo', v)} userId={session?.user?.id} /></div>
 
       <div style={S.field}>
         <label style={S.lbl}>Nome *</label>
@@ -1787,6 +1820,59 @@ function LoginScreen() {
 }
 
 // ─── DEFINIÇÕES PANEL ─────────────────────────────────────────────────────────
+// ─── MIGRATE PHOTOS CARD ─────────────────────────────────────────────────────
+function MigratePhotosCard({ session }) {
+  const [status,   setStatus]   = useState('idle') // idle | running | done
+  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 })
+
+  const run = async () => {
+    if (!window.confirm('Migrar todas as fotos em base64 para Supabase Storage?\n\nEsta operação pode demorar alguns minutos. Não feches o browser.')) return
+    setStatus('running')
+    const { data: wines } = await supabase.from('videiras_wines').select('id, photo').not('photo', 'is', null)
+    const base64Wines = (wines || []).filter(w => w.photo?.startsWith('data:'))
+    if (!base64Wines.length) { setStatus('done'); setProgress({ done: 0, total: 0, failed: 0 }); return }
+    setProgress({ done: 0, total: base64Wines.length, failed: 0 })
+    let done = 0, failed = 0
+    for (const wine of base64Wines) {
+      try {
+        const res  = await fetch(wine.photo)
+        const blob = await res.blob()
+        const path = `${session.user.id}/${wine.id}`
+        const { error: upErr } = await supabase.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: blob.type, upsert: true })
+        if (upErr) throw upErr
+        const { data: { publicUrl } } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path)
+        await supabase.from('videiras_wines').update({ photo: publicUrl }).eq('id', wine.id)
+        done++
+      } catch { failed++ }
+      setProgress({ done, total: base64Wines.length, failed })
+    }
+    setStatus('done')
+  }
+
+  return (
+    <div style={{ ...S.stat, padding: 20, display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px 24px', alignItems: 'center' }}>
+      <div>
+        <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Camera size={14} color="#c8963e" /> Migrar fotos para Storage
+        </div>
+        <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
+          Move as fotos guardadas em base64 na base de dados para Supabase Storage, libertando espaço e eliminando os timeouts.
+          {status === 'running' && <span style={{ color: '#c8963e' }}> A migrar {progress.done}/{progress.total}…</span>}
+          {status === 'done'    && <span style={{ color: '#68c880' }}> Concluído — {progress.done} migradas{progress.failed > 0 ? `, ${progress.failed} falhas` : ''}.</span>}
+        </div>
+      </div>
+      <button onClick={run} disabled={status === 'running'} style={{
+        display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6,
+        border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)',
+        color: '#c8963e', cursor: status === 'running' ? 'not-allowed' : 'pointer',
+        fontSize: 12, fontFamily: FONT, opacity: status === 'running' ? 0.7 : 1,
+      }}>
+        <Camera size={13} /> {status === 'running' ? 'A migrar…' : 'Migrar fotos'}
+      </button>
+    </div>
+  )
+}
+
 function DefinicoesPainel({ session, isAdmin }) {
   const [users,       setUsers]       = useState([])
   const [loadingU,    setLoadingU]    = useState(true)
@@ -2125,6 +2211,7 @@ function DefinicoesPainel({ session, isAdmin }) {
       {/* ── SEGURANÇA ── */}
       {adminTab === 'segurança' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <MigratePhotosCard session={session} />
           {/* Exportar + Importar */}
           <div style={{ ...S.stat, padding: 20, display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px 24px', alignItems: 'center' }}>
             {/* Exportar — descrição */}
@@ -3042,6 +3129,8 @@ export default function App() {
   }
 
   const deleteWine = async (id) => {
+    const wine = wines.find(w => w.id === id)
+    if (wine?.photo) await deleteWinePhoto(wine.photo)
     await supabase.from('videiras_wines').delete().eq('id', id)
     setWines((p) => p.filter((w) => w.id !== id))
     closeModal()

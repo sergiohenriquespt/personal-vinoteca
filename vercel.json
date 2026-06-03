@@ -5,6 +5,12 @@
       "has": [{ "type": "host", "value": "videiras.vercel.app" }],
       "destination": "https://videiras.pt/:path*",
       "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.videiras.pt" }],
+      "destination": "https://videiras.pt/:path*",
+      "permanent": true
     }
   ],
   "headers": [
@@ -15,11 +21,7 @@
         { "key": "X-Content-Type-Options",    "value": "nosniff" },
         { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "X-XSS-Protection",         "value": "1; mode=block" },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://videiras.pt https://www.videiras.pt; script-src 'self' https://videiras.pt https://www.videiras.pt 'unsafe-inline'; style-src 'self' https://videiras.pt https://www.videiras.pt 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://videiras.pt https://www.videiras.pt data:; connect-src 'self' https://videiras.pt https://www.videiras.pt https://*.supabase.co https://api.anthropic.com; frame-ancestors 'none';"
-        }
+        { "key": "X-XSS-Protection",         "value": "1; mode=block" }
       ]
     }
   ]

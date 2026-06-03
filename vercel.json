@@ -5,12 +5,6 @@
       "has": [{ "type": "host", "value": "videiras.vercel.app" }],
       "destination": "https://videiras.pt/:path*",
       "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.videiras.pt" }],
-      "destination": "https://videiras.pt/:path*",
-      "permanent": true
     }
   ],
   "headers": [

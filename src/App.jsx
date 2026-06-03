@@ -152,7 +152,7 @@ const consumptionToDb = (c) => ({
 })
 
 // ─── LOCAL CACHE ──────────────────────────────────────────────────────────────
-const CACHE_KEY = 'videiras_data_v1'
+const CACHE_KEY = 'videiras_data_v2'
 const loadCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') } catch { return null } }
 const saveCache = (d) => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)) } catch {} }
 const clearCache = () => { try { localStorage.removeItem(CACHE_KEY) } catch {} }

@@ -2960,9 +2960,12 @@ export default function App() {
     const hasCachedData = !!loadCache()
     const load = async () => {
       if (!hasCachedData) setLoading(true)
+      // Safety net: never leave the loading screen up forever
+      const loadingTimeout = setTimeout(() => setLoading(false), 10000)
       try {
         // Phase 1: wines only — unblocks the UI as fast as possible
         const wRes = await supabase.from('videiras_wines').select('*').order('name')
+        clearTimeout(loadingTimeout)
         if (wRes.error) console.error('wines:', wRes.error)
         if (wRes.data) setWines(wRes.data.map(wineFromDb))
         setLoading(false)
@@ -2990,6 +2993,7 @@ export default function App() {
         })
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
+        clearTimeout(loadingTimeout)
         setLoading(false)
       }
     }

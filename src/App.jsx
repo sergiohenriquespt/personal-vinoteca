@@ -2961,18 +2961,22 @@ export default function App() {
     const load = async () => {
       if (!hasCachedData) setLoading(true)
       try {
-        const [wRes, eRes, cRes, sRes, qRes, lRes] = await Promise.all([
-          supabase.from('videiras_wines').select('*').order('name'),
+        // Phase 1: wines only — unblocks the UI as fast as possible
+        const wRes = await supabase.from('videiras_wines').select('*').order('name')
+        if (wRes.error) console.error('wines:', wRes.error)
+        if (wRes.data) setWines(wRes.data.map(wineFromDb))
+        setLoading(false)
+
+        // Phase 2: remaining data in background
+        const [eRes, cRes, sRes, qRes, lRes] = await Promise.all([
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
           supabase.from('videiras_quotes').select('id,quote,author,category').eq('active', true),
           supabase.from('videiras_locations').select('id,name').order('name'),
         ])
-        if (wRes.error) console.error('wines:', wRes.error)
         if (eRes.error) console.error('entries:', eRes.error)
         if (cRes.error) console.error('consumptions:', cRes.error)
-        if (wRes.data) setWines(wRes.data.map(wineFromDb))
         if (eRes.data) setEntries(eRes.data.map(entryFromDb))
         if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
         if (sRes.data && sRes.data.length > 0) setSuppliers(sRes.data.map(r => r.name))
@@ -2986,7 +2990,6 @@ export default function App() {
         })
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
-      } finally {
         setLoading(false)
       }
     }

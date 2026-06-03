@@ -3029,17 +3029,20 @@ export default function App() {
     setActiveQuote(pool[Math.floor(Math.random() * pool.length)])
   }
 
+  const WINE_META_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location'
+
   const addWine = async (d) => {
-    const { data, error } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
+    const { data, error } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select(WINE_META_SELECT).single()
     if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
-    if (data) setWines((p) => [...p, wineFromDb(data)])
+    if (data) setWines((p) => [...p, { ...wineFromDb(data), photo: d.photo ?? null }])
     closeModal()
   }
 
   const editWine = async (d) => {
-    const { data, error } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select().single()
+    const currentPhoto = wines.find(w => w.id === activeWine.id)?.photo
+    const { data, error } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select(WINE_META_SELECT).single()
     if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
-    if (data) setWines((p) => p.map((w) => w.id === activeWine.id ? wineFromDb(data) : w))
+    if (data) setWines((p) => p.map((w) => w.id === activeWine.id ? { ...wineFromDb(data), photo: d.photo !== undefined ? (d.photo || null) : currentPhoto } : w))
     closeModal()
   }
 

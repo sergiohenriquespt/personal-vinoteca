@@ -19,8 +19,6 @@ const FONT = "'Outfit', system-ui, sans-serif"
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
 const SUPA_URL = import.meta.env.VITE_SUPA_URL
 const SUPA_KEY = import.meta.env.VITE_SUPA_KEY
-console.log('[videiras] SUPA_URL:', SUPA_URL ?? 'UNDEFINED')
-console.log('[videiras] SUPA_KEY:', SUPA_KEY ? SUPA_KEY.slice(0, 12) + '…' : 'UNDEFINED')
 const supabase = createClient(SUPA_URL, SUPA_KEY)
 const EDGE_FN_URL       = `${SUPA_URL}/functions/v1/videiras-admin`
 const SHARE_FN_URL      = `${SUPA_URL}/functions/v1/videiras-share`
@@ -1738,15 +1736,8 @@ function LoginScreen() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true); setError('')
-    try {
-      console.log('[videiras] login attempt, url:', SUPA_URL ?? 'UNDEFINED')
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      console.log('[videiras] login result:', { data: !!data?.session, error: error?.message })
-      if (error) setError('Email ou password incorrectos.')
-    } catch (err) {
-      console.error('[videiras] login exception:', err)
-      setError('Erro de ligação ao servidor.')
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setError('Email ou password incorrectos.')
     setLoading(false)
   }
 

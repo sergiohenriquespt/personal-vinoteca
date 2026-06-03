@@ -1288,9 +1288,19 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
       </div>
 
       {wine.location && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-          <MapPin size={14} color="#c8963e" />
-          <span style={{ fontSize: 13, color: '#c8963e' }}>{wine.location}</span>
+        <div style={{ marginBottom: 14 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 12px 5px 9px',
+            borderRadius: 20,
+            background: 'rgba(200,150,62,0.10)',
+            border: '1px solid rgba(200,150,62,0.30)',
+            boxShadow: '0 0 0 3px rgba(200,150,62,0.04)',
+            color: '#c8963e', fontSize: 13, fontFamily: FONT, fontWeight: 500,
+          }}>
+            <MapPin size={13} color="#c8963e" style={{ flexShrink: 0 }} />
+            {wine.location}
+          </span>
         </div>
       )}
 

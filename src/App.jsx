@@ -1835,15 +1835,25 @@ function MigratePhotosCard({ session }) {
     let done = 0, failed = 0
     for (const wine of base64Wines) {
       try {
-        const res  = await fetch(wine.photo)
-        const blob = await res.blob()
+        // Explicit base64 → Blob (avoids empty blob.type from fetch())
+        const [header, b64] = wine.photo.split(',')
+        const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg'
+        const bytes = atob(b64)
+        const arr = new Uint8Array(bytes.length)
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+        const blob = new Blob([arr], { type: mime })
         const path = `${session.user.id}/${wine.id}`
-        const { error: upErr } = await supabase.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: blob.type, upsert: true })
-        if (upErr) throw upErr
+        const { error: upErr } = await supabase.storage.from(PHOTO_BUCKET)
+          .upload(path, blob, { contentType: mime, upsert: true })
+        if (upErr) throw new Error(upErr.message)
         const { data: { publicUrl } } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path)
-        await supabase.from('videiras_wines').update({ photo: publicUrl }).eq('id', wine.id)
+        const { error: dbErr } = await supabase.from('videiras_wines').update({ photo: publicUrl }).eq('id', wine.id)
+        if (dbErr) throw new Error(dbErr.message)
         done++
-      } catch { failed++ }
+      } catch (err) {
+        console.error(`[migrate] wine ${wine.id}:`, err.message)
+        failed++
+      }
       setProgress({ done, total: base64Wines.length, failed })
     }
     setStatus('done')

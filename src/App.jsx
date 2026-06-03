@@ -1257,16 +1257,10 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session, onPhotoLoaded }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session }) {
   const [tab, setTab] = useState('info')
   const [lightbox, setLightbox] = useState(false)
   const [sharing, setSharing] = useState(false)
-
-  useEffect(() => {
-    if (wine.photo !== undefined) return
-    supabase.from('videiras_wines').select('photo').eq('id', wine.id).single()
-      .then(({ data }) => { if (data?.photo) onPhotoLoaded?.(wine.id, data.photo) })
-  }, [wine.id])
   const wEntries  = entries.filter((e) => e.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const wConsumed = consumptions.filter((c) => c.wineId === wine.id).sort((a, b) => b.date.localeCompare(a.date))
   const tabSt = (t) => ({ padding: '8px 14px', fontSize: 13, cursor: 'pointer', border: 'none', background: 'none',
@@ -3074,7 +3068,7 @@ export default function App() {
       if (!hasCachedData) setLoading(true)
       try {
         const [wRes, eRes, cRes, sRes, qRes, lRes] = await Promise.all([
-          supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location').order('name'),
+          supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
@@ -3120,8 +3114,6 @@ export default function App() {
 
   const WINE_META_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location'
 
-  const handlePhotoLoaded = (wineId, photo) =>
-    setWines(prev => prev.map(w => w.id === wineId ? { ...w, photo } : w))
 
   const addWine = async (d) => {
     const { data, error } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select(WINE_META_SELECT).single()
@@ -3570,7 +3562,7 @@ export default function App() {
         <ModalShell onClose={closeModal} isMobile={isMobile}>
           {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} onPhotoLoaded={handlePhotoLoaded} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} session={session} />}
           {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} session={session} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}

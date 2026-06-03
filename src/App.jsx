@@ -3030,13 +3030,15 @@ export default function App() {
   }
 
   const addWine = async (d) => {
-    const { data } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
+    const { data, error } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select().single()
+    if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
     if (data) setWines((p) => [...p, wineFromDb(data)])
     closeModal()
   }
 
   const editWine = async (d) => {
-    const { data } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select().single()
+    const { data, error } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select().single()
+    if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
     if (data) setWines((p) => p.map((w) => w.id === activeWine.id ? wineFromDb(data) : w))
     closeModal()
   }

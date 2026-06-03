@@ -2936,9 +2936,14 @@ export default function App() {
       const { data } = await supabase.from('videiras_profiles').select('*').eq('id', userId).single()
       setProfile(data || null)
     }
+    const authTimeout = setTimeout(() => setAuthLoading(false), 8000)
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      clearTimeout(authTimeout)
       setSession(s)
       if (s?.user) loadProfile(s.user.id)
+      setAuthLoading(false)
+    }).catch(() => {
+      clearTimeout(authTimeout)
       setAuthLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {

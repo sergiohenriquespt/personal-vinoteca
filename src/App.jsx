@@ -2964,9 +2964,11 @@ export default function App() {
       const loadingTimeout = setTimeout(() => setLoading(false), 10000)
       try {
         // Phase 1: wines only — unblocks the UI as fast as possible
+        console.log('[videiras] loading wines…')
         const wRes = await supabase.from('videiras_wines').select('*').order('name')
         clearTimeout(loadingTimeout)
-        if (wRes.error) console.error('wines:', wRes.error)
+        if (wRes.error) console.error('[videiras] wines error:', wRes.error)
+        else console.log('[videiras] wines loaded:', wRes.data?.length ?? 0)
         if (wRes.data) setWines(wRes.data.map(wineFromDb))
         setLoading(false)
 
@@ -2978,8 +2980,8 @@ export default function App() {
           supabase.from('videiras_quotes').select('id,quote,author,category').eq('active', true),
           supabase.from('videiras_locations').select('id,name').order('name'),
         ])
-        if (eRes.error) console.error('entries:', eRes.error)
-        if (cRes.error) console.error('consumptions:', cRes.error)
+        if (eRes.error) console.error('[videiras] entries error:', eRes.error)
+        if (cRes.error) console.error('[videiras] consumptions error:', cRes.error)
         if (eRes.data) setEntries(eRes.data.map(entryFromDb))
         if (cRes.data) setConsumptions(cRes.data.map(consumptionFromDb))
         if (sRes.data && sRes.data.length > 0) setSuppliers(sRes.data.map(r => r.name))

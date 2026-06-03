@@ -1572,14 +1572,24 @@ function WineListRow({ wine, onClick, isMobile }) {
               ? <>{[wine.region, wine.country].filter(Boolean).join(', ')}{wine.year ? ` · ${wine.year}` : ''}</>
               : [wine.region, wine.country].filter(Boolean).join(', ')}
           </span>
-          {wine.location && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: '#1a1712', color: '#6a5f52', fontSize: 10, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          {isMobile && wine.location && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 7px', borderRadius: 4, background: 'rgba(200,150,62,0.12)', color: '#c8963e', fontSize: 10, flexShrink: 0, whiteSpace: 'nowrap' }}>
               <MapPin size={9} />{wine.location}
             </span>
           )}
         </div>
       </div>
       {!isMobile && <div style={{ width: 86, flexShrink: 0 }}><Badge type={wine.type} /></div>}
+      {!isMobile && (
+        <div style={{ width: 100, flexShrink: 0 }}>
+          {wine.location && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, background: 'rgba(200,150,62,0.08)', border: '1px solid rgba(200,150,62,0.15)' }}>
+              <MapPin size={10} color="#c8963e" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: '#c8b070', fontWeight: 400, letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 68 }}>{wine.location}</span>
+            </div>
+          )}
+        </div>
+      )}
       {!isMobile && <div style={{ width: 52, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.alcoholContent ? `${wine.alcoholContent}%` : '—'}</div>}
       {!isMobile && <div style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.year || '—'}</div>}
       {!isMobile && <div style={{ width: 76, flexShrink: 0 }}><Stars value={wine.personalRating} size={12} /></div>}
@@ -1604,9 +1614,9 @@ function WineListView({ wines, onWineClick, isMobile }) {
   const sorted = useMemo(() => {
     return [...wines].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey]
-      if (av == null && bv == null) return 0
-      if (av == null) return 1
-      if (bv == null) return -1
+      if ((av == null || av === '') && (bv == null || bv === '')) return 0
+      if (av == null || av === '') return 1
+      if (bv == null || bv === '') return -1
       const cmp = typeof av === 'string' ? av.localeCompare(bv, 'pt') * sortDir : (av - bv) * sortDir
       if (cmp !== 0) return cmp
       return (a.year ?? 0) - (b.year ?? 0)
@@ -1632,6 +1642,7 @@ function WineListView({ wines, onWineClick, isMobile }) {
         <div style={{ width: isMobile ? 22 : 26, flexShrink: 0 }} />
         <ColHead label="Vinho"  col="name"           width={undefined} style={{ flex: 1 }} />
         {!isMobile && <ColHead label="Tipo"   col="type"           width={86} />}
+        {!isMobile && <ColHead label="Local"  col="location"       width={100} />}
         {!isMobile && <ColHead label="Álcool" col="alcoholContent" width={52} align="center" />}
         {!isMobile && <ColHead label="Ano"    col="year"           width={44} align="center" />}
         {!isMobile && <ColHead label="Rating" col="personalRating" width={76} />}

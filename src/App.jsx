@@ -102,7 +102,7 @@ const wineFromDb = (r) => ({
   marketPrice: r.market_price != null ? parseFloat(r.market_price) : null,
   personalRating: parseFloat(r.personal_rating) || 0,
   vivinoRating: r.vivino_rating != null ? parseFloat(r.vivino_rating) : null,
-  quantity: r.quantity, photo: r.photo || null, notes: r.notes || '',
+  quantity: r.quantity, photo: 'photo' in r ? (r.photo || null) : undefined, notes: r.notes || '',
   castas: r.castas || '', alcoholContent: r.alcohol_content != null ? parseFloat(r.alcohol_content) : '',
   producer: r.producer || '', winemaker: r.winemaker || '',
   bottleSize: r.bottle_size || 750,
@@ -113,7 +113,7 @@ const wineToDb = (w) => ({
   purchase_price: w.purchasePrice || 0, market_price: w.marketPrice ?? null,
   personal_rating: w.personalRating || 0,
   vivino_rating: w.vivinoRating ?? null, quantity: w.quantity ?? 0,
-  photo: w.photo || null, notes: w.notes || '',
+  photo: w.photo !== undefined ? (w.photo || null) : undefined, notes: w.notes || '',
   castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat((w.alcoholContent + '').replace(',', '.')) : null,
   producer: w.producer || null, winemaker: w.winemaker || null,
   bottle_size: w.bottleSize || 750,
@@ -876,6 +876,10 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
   const [showTech, setShowTech] = useState(!!(wine && (wine.producer || wine.winemaker || wine.castas || (wine.alcoholContent !== '' && wine.alcoholContent != null))))
   const [newType,    setNewType]    = useState('')
+  // Sync photo from parent state when batch-loading completes after form opens
+  useEffect(() => {
+    if (wine?.photo !== undefined && f.photo === undefined) set('photo', wine.photo || null)
+  }, [wine?.photo])
   const [addingType, setAddingType] = useState(false)
   const [addingLocation,  setAddingLocation]  = useState(false)
   const [newLocationName, setNewLocationName] = useState('')
@@ -2967,7 +2971,7 @@ export default function App() {
       if (!hasCachedData) setLoading(true)
       try {
         const [wRes, eRes, cRes, sRes, qRes, lRes] = await Promise.all([
-          supabase.from('videiras_wines').select('*').order('name'),
+          supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
@@ -2989,6 +2993,20 @@ export default function App() {
           entries:      eRes.data ?? [],
           consumptions: cRes.data ?? [],
         })
+        // Batch-load photos in background (60 MB split into small chunks)
+        if (wRes.data?.length) {
+          const allIds = wRes.data.map(r => r.id)
+          const BATCH = 15
+          const batches = []
+          for (let i = 0; i < allIds.length; i += BATCH) batches.push(allIds.slice(i, i + BATCH))
+          await Promise.all(batches.map(async (ids) => {
+            const { data: photos } = await supabase.from('videiras_wines').select('id,photo').in('id', ids).not('photo', 'is', null)
+            if (photos?.length) {
+              const map = Object.fromEntries(photos.map(r => [r.id, r.photo]))
+              setWines(prev => prev.map(w => map[w.id] !== undefined ? { ...w, photo: map[w.id] } : w))
+            }
+          }))
+        }
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
       } finally {

@@ -122,6 +122,7 @@ const wineFromDb = (r) => ({
   producer: r.producer || '', winemaker: r.winemaker || '',
   bottleSize: r.bottle_size || 750,
   location: r.location || '',
+  criticRatings: r.critic_ratings || {},
 })
 const wineToDb = (w) => ({
   name: w.name, type: w.type, country: w.country, region: w.region, year: w.year || null,
@@ -132,6 +133,7 @@ const wineToDb = (w) => ({
   castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat((w.alcoholContent + '').replace(',', '.')) : null,
   producer: w.producer || null, winemaker: w.winemaker || null,
   bottle_size: w.bottleSize || 750,
+  critic_ratings: w.criticRatings || {},
 })
 const entryFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date,
@@ -907,8 +909,8 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 }
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
-function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile, locations = [], setLocations, session, wineLocationRows = [] }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '', bottleSize: 750 }
+function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile, locations = [], setLocations, session, wineLocationRows = [], critics = [] }) {
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '', bottleSize: 750, criticRatings: {} }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
@@ -981,7 +983,10 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
   const handleSave = () => {
     if (!f.name.trim()) return
-    onSave({ ...f, locationRows, purchasePrice: parseFloat((f.purchasePrice + '').replace(',', '.')) || 0,
+    const criticRatings = Object.fromEntries(
+      Object.entries(f.criticRatings || {}).map(([k, v]) => [k, parseInt(v)]).filter(([, v]) => !isNaN(v))
+    )
+    onSave({ ...f, locationRows, criticRatings, purchasePrice: parseFloat((f.purchasePrice + '').replace(',', '.')) || 0,
       marketPrice: parseFloat((f.marketPrice + '').replace(',', '.')) || null,
       vivinoRating: parseFloat((f.vivinoRating + '').replace(',', '.')) || null,
       year: parseInt(f.year) || null, personalRating: f.personalRating || 0,
@@ -1237,6 +1242,45 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         </div>
       </div>
 
+      {critics.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <label style={S.lbl}>Pontuações de Críticos</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
+            {critics.map(c => {
+              const hasVal = c.abbrev in (f.criticRatings || {})
+              if (hasVal) return (
+                <div key={c.abbrev} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(200,150,62,0.06)', border: '1px solid rgba(200,150,62,0.22)', borderRadius: 8, padding: '8px 10px', minWidth: 60 }}>
+                  <span style={{ fontSize: 9, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{c.abbrev}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <input
+                      style={{ ...S.inp, width: 44, textAlign: 'center', padding: '3px 4px', fontSize: 14, fontWeight: 300 }}
+                      type="number" min={0} max={c.scale}
+                      value={f.criticRatings[c.abbrev]}
+                      onChange={e => set('criticRatings', { ...(f.criticRatings || {}), [c.abbrev]: e.target.value })}
+                    />
+                    <button onClick={() => { const { [c.abbrev]: _, ...rest } = f.criticRatings || {}; set('criticRatings', rest) }}
+                      style={{ background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', padding: 0, display: 'flex', lineHeight: 1 }}>
+                      <X size={10} />
+                    </button>
+                  </div>
+                </div>
+              )
+              return (
+                <button key={c.abbrev}
+                  onClick={() => set('criticRatings', { ...(f.criticRatings || {}), [c.abbrev]: '' })}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', minWidth: 60, cursor: 'pointer', color: '#4a453f', fontFamily: FONT }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(200,150,62,0.25)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                >
+                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{c.abbrev}</span>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>+</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={S.field}>
         <label style={S.lbl}>Notas</label>
         <textarea style={{ ...S.inp, minHeight: 64, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Notas de prova, potencial de guarda…" />
@@ -1340,7 +1384,7 @@ function ConsumptionForm({ wine, consumption, onSave, onClose, wineLocations = [
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session, wineLocations = [], locations = [] }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session, wineLocations = [], locations = [], critics = [] }) {
   const [tab, setTab] = useState('info')
   const [lightbox, setLightbox] = useState(false)
   const [sharing, setSharing] = useState(false)
@@ -1408,6 +1452,33 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
           </div>
         ))}
       </div>
+
+      {(() => {
+        const cr = wine.criticRatings || {}
+        const rated = critics.filter(c => cr[c.abbrev] != null)
+        if (!rated.length) return null
+        return (
+          <>
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 0 14px' }} />
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: '#6a5f52', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Pontuações de Críticos</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 8 }}>
+                {rated.map(c => {
+                  const score = cr[c.abbrev]
+                  const col = score >= 95 ? '#c8963e' : score >= 90 ? '#e8dece' : '#6a5f52'
+                  return (
+                    <div key={c.abbrev} style={{ background: '#161310', border: '0.5px solid #2a2520', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, color: '#6a5f52', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>{c.abbrev}</div>
+                      <div style={{ fontSize: 22, fontWeight: 300, color: col, lineHeight: 1, fontFamily: FONT, marginBottom: 4 }}>{score}</div>
+                      <div style={{ fontSize: 8, color: '#3a3530', letterSpacing: '0.02em' }}>{c.name}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {wine.notes && <div style={{ background: 'rgba(200,150,62,0.07)', border: '1px solid rgba(200,150,62,0.15)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#c8a050', lineHeight: 1.55 }}>{wine.notes}</div>}
 
@@ -3115,6 +3186,7 @@ export default function App() {
   const [suppliers,        setSuppliers]        = useState([])
   const [locations,        setLocations]        = useState([])
   const [wineLocations,    setWineLocations]    = useState([])
+  const [critics,          setCritics]          = useState([])
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
   const [view,           setView]           = useState('dashboard')
@@ -3199,14 +3271,15 @@ export default function App() {
     const load = async () => {
       if (!hasCachedData) setLoading(true)
       try {
-        const [wRes, eRes, cRes, sRes, qRes, lRes, wlRes] = await Promise.all([
-          supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo').order('name'),
+        const [wRes, eRes, cRes, sRes, qRes, lRes, wlRes, crRes] = await Promise.all([
+          supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo,critic_ratings').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
           supabase.from('videiras_quotes').select('id,quote,author,category').eq('active', true),
           supabase.from('videiras_locations').select('id,name').order('name'),
           supabase.from('videiras_wine_locations').select('id,wine_id,location_id,quantity'),
+          supabase.from('videiras_critics').select('id,abbrev,name,scale,sort_order').eq('active', true).order('sort_order'),
         ])
         if (wRes.error) console.error('wines:', wRes.error)
         if (eRes.error) console.error('entries:', eRes.error)
@@ -3219,6 +3292,7 @@ export default function App() {
         if (qRes.data) setQuotes(qRes.data)
         if (lRes.data) setLocations(lRes.data)
         if (wlRes.data) setWineLocations(wlRes.data)
+        if (crRes.data) setCritics(crRes.data)
         saveCache({
           wines:        wRes.data ?? [],
           entries:      eRes.data ?? [],
@@ -3246,7 +3320,7 @@ export default function App() {
     setActiveQuote(pool[Math.floor(Math.random() * pool.length)])
   }
 
-  const WINE_META_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location'
+  const WINE_META_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,critic_ratings'
 
 
   const addWine = async (d) => {
@@ -3742,9 +3816,9 @@ export default function App() {
       {/* MODALS */}
       {modal && (
         <ModalShell onClose={closeModal} isMobile={isMobile}>
-          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} />}
-          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} critics={critics} />}
+          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} critics={critics} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} critics={critics} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}

@@ -396,6 +396,7 @@ async function generateInstagramImage(wine, tastingNotes = '') {
   if (wine.photo) {
     await new Promise(resolve => {
       const img = new Image()
+      img.crossOrigin = 'anonymous'
       img.onload = () => {
         const PW = 290, PH = 360, px = (W - PW) / 2
         ctx.save(); ctx.beginPath(); ctx.roundRect(px, y, PW, PH, 12); ctx.clip()

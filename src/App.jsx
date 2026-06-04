@@ -132,7 +132,6 @@ const wineToDb = (w) => ({
   castas: w.castas || null, alcohol_content: w.alcoholContent !== '' ? parseFloat((w.alcoholContent + '').replace(',', '.')) : null,
   producer: w.producer || null, winemaker: w.winemaker || null,
   bottle_size: w.bottleSize || 750,
-  location: w.location || null,
 })
 const entryFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date,
@@ -150,6 +149,11 @@ const consumptionToDb = (c) => ({
   wine_id: c.wineId, date: c.date, quantity: c.quantity,
   rating: c.rating || null, notes: c.notes || '',
 })
+const getWineLocationData = (wineId, wineLocations, locations) =>
+  wineLocations
+    .filter(wl => wl.wine_id === wineId)
+    .map(wl => ({ ...wl, name: locations.find(l => l.id === wl.location_id)?.name }))
+    .filter(wl => wl.name)
 
 // ─── LOCAL CACHE ──────────────────────────────────────────────────────────────
 const CACHE_KEY = 'videiras_data_v2'
@@ -903,8 +907,8 @@ function WineNameAutocomplete({ value, onChange, allWines, onExactMatch, onParti
 }
 
 // ─── WINE FORM ────────────────────────────────────────────────────────────────
-function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile, locations = [], setLocations, session }) {
-  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '', bottleSize: 750, location: '' }
+function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions, allWines, onExactMatch, onSave, onClose, isMobile, locations = [], setLocations, session, wineLocationRows = [] }) {
+  const blank = { name: '', type: 'Tinto', country: 'Portugal', region: '', year: new Date().getFullYear(), purchasePrice: '', marketPrice: '', personalRating: 0, vivinoRating: '', quantity: 0, photo: null, notes: '', castas: '', alcoholContent: '', producer: '', winemaker: '', bottleSize: 750 }
   const [f, setF] = useState(wine ? { ...wine, purchasePrice: fmtNum(wine.purchasePrice), marketPrice: fmtNum(wine.marketPrice), vivinoRating: fmtNum(wine.vivinoRating) } : blank)
   const [loadingV,   setLoadingV]   = useState(false)
   const [vivinoStatus, setVivinoStatus] = useState('idle') // 'idle' | 'ok' | 'error' | 'nokey'
@@ -915,17 +919,22 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
     if (wine?.photo !== undefined && f.photo === undefined) set('photo', wine.photo || null)
   }, [wine?.photo])
   const [addingType, setAddingType] = useState(false)
-  const [addingLocation,  setAddingLocation]  = useState(false)
-  const [newLocationName, setNewLocationName] = useState('')
-  const confirmAddLocation = async () => {
+  const [locationRows,       setLocationRows]       = useState(wineLocationRows)
+  const [addingLocationForRow, setAddingLocationForRow] = useState(null)
+  const [newLocationName,    setNewLocationName]    = useState('')
+  const confirmAddLocationForRow = async () => {
     const name = newLocationName.trim()
     if (!name) return
     const { data } = await supabase.from('videiras_locations').insert({ name, user_id: session?.user?.id }).select().single()
     if (data) {
       setLocations?.(p => [...p, data].sort((a, b) => a.name.localeCompare(b.name, 'pt')))
-      set('location', data.name)
+      if (typeof addingLocationForRow === 'number') {
+        setLocationRows(p => p.map((r, i) => i === addingLocationForRow ? { ...r, locationId: data.id } : r))
+      } else {
+        setLocationRows(p => [...p, { locationId: data.id, quantity: 1 }])
+      }
     }
-    setAddingLocation(false)
+    setAddingLocationForRow(null)
     setNewLocationName('')
   }
 
@@ -972,7 +981,7 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 
   const handleSave = () => {
     if (!f.name.trim()) return
-    onSave({ ...f, purchasePrice: parseFloat((f.purchasePrice + '').replace(',', '.')) || 0,
+    onSave({ ...f, locationRows, purchasePrice: parseFloat((f.purchasePrice + '').replace(',', '.')) || 0,
       marketPrice: parseFloat((f.marketPrice + '').replace(',', '.')) || null,
       vivinoRating: parseFloat((f.vivinoRating + '').replace(',', '.')) || null,
       year: parseInt(f.year) || null, personalRating: f.personalRating || 0,
@@ -1061,33 +1070,86 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
         </div>
       </div>
 
-      <div style={S.field}>
-        <label style={S.lbl}>Localização</label>
-        {addingLocation ? (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              style={{ ...S.inp, flex: 1 }}
-              value={newLocationName}
-              onChange={e => setNewLocationName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') confirmAddLocation(); if (e.key === 'Escape') { setAddingLocation(false); setNewLocationName('') } }}
-              placeholder="Nome da localização…"
-              autoFocus
-            />
-            <button onClick={confirmAddLocation} style={{ background: 'rgba(200,150,62,0.2)', border: 'none', borderRadius: 6, color: '#c8963e', cursor: 'pointer', padding: '0 10px', display: 'flex', alignItems: 'center' }}><Check size={14} /></button>
-            <button onClick={() => { setAddingLocation(false); setNewLocationName('') }} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center' }}><X size={14} /></button>
+      {secHead('Localizações', false)}
+
+      {locationRows.length === 0 && (
+        <p style={{ fontSize: 12, color: '#4a453f', margin: '0 0 10px' }}>Sem localização definida.</p>
+      )}
+
+      {locationRows.map((row, idx) => (
+        <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+          {addingLocationForRow === idx ? (
+            <>
+              <input
+                style={{ ...S.inp, flex: 1 }}
+                value={newLocationName}
+                onChange={e => setNewLocationName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') confirmAddLocationForRow(); if (e.key === 'Escape') { setAddingLocationForRow(null); setNewLocationName('') } }}
+                placeholder="Nome da localização…"
+                autoFocus
+              />
+              <button onClick={confirmAddLocationForRow} style={{ background: 'rgba(200,150,62,0.2)', border: 'none', borderRadius: 6, color: '#c8963e', cursor: 'pointer', padding: '0 10px', display: 'flex', alignItems: 'center', flexShrink: 0 }}><Check size={14} /></button>
+              <button onClick={() => { setAddingLocationForRow(null); setNewLocationName('') }} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center', flexShrink: 0 }}><X size={14} /></button>
+            </>
+          ) : (
+            <>
+              <select
+                style={{ ...S.inp, flex: 1, cursor: 'pointer' }}
+                value={row.locationId}
+                onChange={e => {
+                  if (e.target.value === '__add__') { setAddingLocationForRow(idx) }
+                  else setLocationRows(p => p.map((r, i) => i === idx ? { ...r, locationId: e.target.value } : r))
+                }}
+              >
+                <option value="">— Seleccionar —</option>
+                {locations.filter(l => !locationRows.some((r, i) => i !== idx && r.locationId === l.id))
+                  .map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                <option value="__add__">+ Nova localização</option>
+              </select>
+              <input
+                style={{ ...S.inp, width: 64, flexShrink: 0 }}
+                type="number" min={0}
+                value={row.quantity}
+                onChange={e => setLocationRows(p => p.map((r, i) => i === idx ? { ...r, quantity: parseInt(e.target.value) || 0 } : r))}
+              />
+              <button
+                onClick={() => setLocationRows(p => p.filter((_, i) => i !== idx))}
+                style={{ background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', padding: '0 6px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+              ><X size={13} /></button>
+            </>
+          )}
+        </div>
+      ))}
+
+      {(() => {
+        const total = locationRows.reduce((s, r) => s + (parseInt(r.quantity) || 0), 0)
+        const max = parseInt(f.quantity) || 0
+        return max > 0 && total > max ? (
+          <div style={{ fontSize: 11, color: '#e87080', marginBottom: 8 }}>
+            A soma das localizações ({total}) excede o total do vinho ({max}).
           </div>
-        ) : (
-          <select
-            style={{ ...S.inp, cursor: 'pointer' }}
-            value={f.location}
-            onChange={e => { if (e.target.value === '__add__') setAddingLocation(true); else set('location', e.target.value) }}
-          >
-            <option value="">— Sem localização —</option>
-            {locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
-            <option value="__add__">+ Adicionar localização</option>
-          </select>
-        )}
-      </div>
+        ) : null
+      })()}
+
+      {addingLocationForRow === 'new' ? (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          <input
+            style={{ ...S.inp, flex: 1 }}
+            value={newLocationName}
+            onChange={e => setNewLocationName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') confirmAddLocationForRow(); if (e.key === 'Escape') { setAddingLocationForRow(null); setNewLocationName('') } }}
+            placeholder="Nome da localização…"
+            autoFocus
+          />
+          <button onClick={confirmAddLocationForRow} style={{ background: 'rgba(200,150,62,0.2)', border: 'none', borderRadius: 6, color: '#c8963e', cursor: 'pointer', padding: '0 10px', display: 'flex', alignItems: 'center' }}><Check size={14} /></button>
+          <button onClick={() => { setAddingLocationForRow(null); setNewLocationName('') }} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center' }}><X size={14} /></button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setLocationRows(p => [...p, { locationId: '', quantity: 1 }])}
+          style={{ fontSize: 12, color: '#c8963e', background: 'none', border: '1px dashed rgba(200,150,62,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', marginBottom: 4, fontFamily: FONT }}
+        >+ Adicionar localização</button>
+      )}
 
       {secHead('Preços & Stock', false)}
 
@@ -1189,10 +1251,10 @@ function WineForm({ wine, types, setTypes, countriesRegions, setCountriesRegions
 }
 
 // ─── ENTRY FORM ───────────────────────────────────────────────────────────────
-function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session }) {
+function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session, locations = [] }) {
   const [f, setF] = useState(entry
-    ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price) }
-    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice) })
+    ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price), locationId: '' }
+    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice), locationId: '' })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const list = suppliers ?? SUPPLIERS
   return (
@@ -1224,6 +1286,15 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
         />
       </div>
       <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="0,00" /></div>
+      {!entry && locations.length > 0 && (
+        <div style={S.field}>
+          <label style={S.lbl}>Localização (opcional)</label>
+          <select style={{ ...S.inp, cursor: 'pointer' }} value={f.locationId} onChange={e => set('locationId', e.target.value)}>
+            <option value="">— Sem localização —</option>
+            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
         <Btn variant="gold" onClick={() => { if (f.quantity >= 1) { if (entry || window.confirm(`Registar entrada de ${f.quantity} ${parseInt(f.quantity) === 1 ? 'garrafa' : 'garrafas'} de "${wine.name}"?`)) onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 }) } }}><LogIn size={14} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
@@ -1233,13 +1304,13 @@ function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onCl
 }
 
 // ─── CONSUMPTION FORM ─────────────────────────────────────────────────────────
-function ConsumptionForm({ wine, consumption, onSave, onClose }) {
+function ConsumptionForm({ wine, consumption, onSave, onClose, wineLocations = [], locations = [] }) {
   const [f, setF] = useState(consumption
-    ? { date: consumption.date, quantity: consumption.quantity, rating: consumption.rating || 0, notes: consumption.notes || '' }
-    : { date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '' })
+    ? { date: consumption.date, quantity: consumption.quantity, rating: consumption.rating || 0, notes: consumption.notes || '', locationId: '' }
+    : { date: new Date().toISOString().slice(0, 10), quantity: 1, rating: wine?.personalRating || 0, notes: '', locationId: '' })
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
-  // When editing, the original quantity is already deducted from stock — add it back for the max
   const maxQty = consumption ? wine.quantity + consumption.quantity : wine.quantity
+  const wineLocData = getWineLocationData(wine.id, wineLocations, locations)
   return (
     <>
       <ModalHeader title={consumption ? "Editar Consumo" : "Registar Consumo"} subtitle={`${wine.name} · ${wine.year} · ${maxQty} disponíveis`} onClose={onClose} />
@@ -1247,6 +1318,17 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
         <div style={{ flex: 1 }}><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></div>
         <div style={{ width: 80, flexShrink: 0 }}><label style={S.lbl}>Qtd. (máx. {maxQty})</label><input style={S.inp} type="number" min={1} max={maxQty} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} /></div>
       </div>
+      {!consumption && wineLocData.length > 0 && (
+        <div style={S.field}>
+          <label style={S.lbl}>Retirar de</label>
+          <select style={{ ...S.inp, cursor: 'pointer' }} value={f.locationId} onChange={e => set('locationId', e.target.value)}>
+            <option value="">— Não especificar —</option>
+            {wineLocData.map(ld => (
+              <option key={ld.location_id} value={ld.location_id}>{ld.name} ({ld.quantity} disponíveis)</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div style={S.field}><label style={S.lbl}>Classificação Pessoal</label><div style={{ padding: '8px 0' }}><Stars value={f.rating} onChange={(v) => set('rating', v)} size={22} /></div></div>
       <div style={S.field}><label style={S.lbl}>Observações</label><textarea style={{ ...S.inp, minHeight: 72, resize: 'vertical' }} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Ocasião, maridagem, notas de prova…" /></div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -1258,7 +1340,7 @@ function ConsumptionForm({ wine, consumption, onSave, onClose }) {
 }
 
 // ─── WINE DETAIL ──────────────────────────────────────────────────────────────
-function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session }) {
+function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumption, onEdit, onDelete, onDeleteEntry, onDeleteConsumption, onEditEntry, onEditConsumption, session, wineLocations = [], locations = [] }) {
   const [tab, setTab] = useState('info')
   const [lightbox, setLightbox] = useState(false)
   const [sharing, setSharing] = useState(false)
@@ -1288,22 +1370,29 @@ function WineDetail({ wine, entries, consumptions, onClose, onEntry, onConsumpti
         </div>
       </div>
 
-      {wine.location && (
-        <div style={{ marginBottom: 14 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '5px 12px 5px 9px',
-            borderRadius: 20,
-            background: 'rgba(200,150,62,0.10)',
-            border: '1px solid rgba(200,150,62,0.30)',
-            boxShadow: '0 0 0 3px rgba(200,150,62,0.04)',
-            color: '#c8963e', fontSize: 13, fontFamily: FONT, fontWeight: 500,
-          }}>
-            <MapPin size={13} color="#c8963e" style={{ flexShrink: 0 }} />
-            {wine.location}
-          </span>
-        </div>
-      )}
+      {(() => {
+        const locData = getWineLocationData(wine.id, wineLocations, locations)
+        if (!locData.length) return null
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px 5px 9px', borderRadius: 20,
+              background: 'rgba(200,150,62,0.10)', border: '1px solid rgba(200,150,62,0.30)',
+              boxShadow: '0 0 0 3px rgba(200,150,62,0.04)',
+              color: '#c8963e', fontSize: 13, fontFamily: FONT, fontWeight: 500, flexWrap: 'wrap',
+            }}>
+              <MapPin size={13} color="#c8963e" style={{ flexShrink: 0 }} />
+              {locData.map((ld, i) => (
+                <React.Fragment key={ld.location_id}>
+                  {i > 0 && <span style={{ color: 'rgba(200,150,62,0.5)', margin: '0 2px' }}>·</span>}
+                  {ld.name} ({ld.quantity})
+                </React.Fragment>
+              ))}
+            </span>
+          </div>
+        )
+      })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
         {[{ l: 'Em Adega', v: <span style={{ fontSize: 22, fontWeight: 300, color: wine.quantity > 0 ? '#e8dece' : '#e87080', fontFamily: FONT }}>{wine.quantity}</span> },
@@ -1541,7 +1630,7 @@ function FilterSelect({ placeholder, value, onChange, options, onAdd, onRemove, 
 }
 
 // ─── WINE LIST VIEW ───────────────────────────────────────────────────────────
-function WineListRow({ wine, onClick, isMobile }) {
+function WineListRow({ wine, onClick, isMobile, wineLocations = [], locations = [] }) {
   const [lightbox, setLightbox] = React.useState(false)
   const [hoveredPhoto, setHoveredPhoto] = React.useState(false)
   return (
@@ -1583,24 +1672,33 @@ function WineListRow({ wine, onClick, isMobile }) {
               ? <>{[wine.region, wine.country].filter(Boolean).join(', ')}{wine.year ? ` · ${wine.year}` : ''}</>
               : [wine.region, wine.country].filter(Boolean).join(', ')}
           </span>
-          {isMobile && wine.location && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 7px', borderRadius: 4, background: 'rgba(200,150,62,0.12)', color: '#c8963e', fontSize: 10, flexShrink: 0, whiteSpace: 'nowrap' }}>
-              <MapPin size={9} />{wine.location}
-            </span>
-          )}
+          {isMobile && (() => {
+            const locData = getWineLocationData(wine.id, wineLocations, locations)
+            if (!locData.length) return null
+            const label = locData.length === 1 ? locData[0].name : `${locData.length} locais`
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 7px', borderRadius: 4, background: 'rgba(200,150,62,0.12)', color: '#c8963e', fontSize: 10, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                <MapPin size={9} />{label}
+              </span>
+            )
+          })()}
         </div>
       </div>
       {!isMobile && <div style={{ width: 86, flexShrink: 0 }}><Badge type={wine.type} /></div>}
-      {!isMobile && (
-        <div style={{ width: 100, flexShrink: 0 }}>
-          {wine.location && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, background: 'rgba(200,150,62,0.08)', border: '1px solid rgba(200,150,62,0.15)' }}>
-              <MapPin size={10} color="#c8963e" strokeWidth={2.5} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: '#c8b070', fontWeight: 400, letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 68 }}>{wine.location}</span>
-            </div>
-          )}
-        </div>
-      )}
+      {!isMobile && (() => {
+        const locData = getWineLocationData(wine.id, wineLocations, locations)
+        const label = locData.length === 0 ? null : locData.length === 1 ? locData[0].name : `${locData.length} locais`
+        return (
+          <div style={{ width: 100, flexShrink: 0 }}>
+            {label && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, background: 'rgba(200,150,62,0.08)', border: '1px solid rgba(200,150,62,0.15)' }}>
+                <MapPin size={10} color="#c8963e" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#c8b070', fontWeight: 400, letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 68 }}>{label}</span>
+              </div>
+            )}
+          </div>
+        )
+      })()}
       {!isMobile && <div style={{ width: 52, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.alcoholContent ? `${wine.alcoholContent}%` : '—'}</div>}
       {!isMobile && <div style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 13, color: '#9a8f82' }}>{wine.year || '—'}</div>}
       {!isMobile && <div style={{ width: 76, flexShrink: 0 }}><Stars value={wine.personalRating} size={12} /></div>}
@@ -1613,7 +1711,7 @@ function WineListRow({ wine, onClick, isMobile }) {
   )
 }
 
-function WineListView({ wines, onWineClick, isMobile }) {
+function WineListView({ wines, onWineClick, isMobile, wineLocations = [], locations = [] }) {
   const [sortKey, setSortKey] = useState('name')
   const [sortDir, setSortDir] = useState(1)
 
@@ -1623,8 +1721,14 @@ function WineListView({ wines, onWineClick, isMobile }) {
   }
 
   const sorted = useMemo(() => {
+    const getLocKey = (w) => {
+      const names = wineLocations.filter(wl => wl.wine_id === w.id)
+        .map(wl => locations.find(l => l.id === wl.location_id)?.name).filter(Boolean).sort()
+      return names[0] || ''
+    }
     return [...wines].sort((a, b) => {
-      let av = a[sortKey], bv = b[sortKey]
+      let av = sortKey === 'location' ? getLocKey(a) : (a[sortKey] ?? '')
+      let bv = sortKey === 'location' ? getLocKey(b) : (b[sortKey] ?? '')
       if ((av == null || av === '') && (bv == null || bv === '')) return 0
       if (av == null || av === '') return 1
       if (bv == null || bv === '') return -1
@@ -1632,7 +1736,7 @@ function WineListView({ wines, onWineClick, isMobile }) {
       if (cmp !== 0) return cmp
       return (a.year ?? 0) - (b.year ?? 0)
     })
-  }, [wines, sortKey, sortDir])
+  }, [wines, sortKey, sortDir, wineLocations, locations])
 
   const ColHead = ({ label, col, width, align = 'left', style = {} }) => {
     const active = sortKey === col
@@ -1662,13 +1766,13 @@ function WineListView({ wines, onWineClick, isMobile }) {
       </div>
       {sorted.length === 0
         ? <div style={{ textAlign: 'center', padding: '48px 0', color: '#4a453f' }}><Wine size={32} style={{ marginBottom: 10, opacity: 0.2 }} /><p style={{ fontSize: 13 }}>Nenhum vinho encontrado.</p></div>
-        : sorted.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} isMobile={isMobile} />)}
+        : sorted.map((w) => <WineListRow key={w.id} wine={w} onClick={() => onWineClick(w)} isMobile={isMobile} wineLocations={wineLocations} locations={locations} />)}
     </div>
   )
 }
 
 // ─── WINE GRID VIEW ───────────────────────────────────────────────────────────
-function WineGridView({ wines, onWineClick }) {
+function WineGridView({ wines, onWineClick, wineLocations = [], locations = [] }) {
   const [hoveredPhoto, setHoveredPhoto] = useState(null)
   if (wines.length === 0) return <div style={{ textAlign: 'center', padding: '80px 0', color: '#4a453f' }}><Wine size={40} style={{ marginBottom: 12, opacity: 0.25 }} /><p style={{ fontSize: 14 }}>Nenhum vinho encontrado.</p></div>
   return (
@@ -1711,13 +1815,18 @@ function WineGridView({ wines, onWineClick }) {
                 <span style={{ fontSize: 12, fontWeight: 500, color: w.quantity > 0 ? '#68c880' : '#e87080' }}>{w.quantity} 🍾</span>
               </div>
               <div style={{ fontSize: 14, fontWeight: 400, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.02em', marginBottom: 2, lineHeight: 1.3 }}>{w.name}</div>
-              {w.location && (
-                <div style={{ marginBottom: 4 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, background: '#1a1712', color: '#6a5f52', fontSize: 10 }}>
-                    <MapPin size={9} />{w.location}
-                  </span>
-                </div>
-              )}
+              {(() => {
+                const locData = getWineLocationData(w.id, wineLocations, locations)
+                if (!locData.length) return null
+                const label = locData.length === 1 ? locData[0].name : `${locData.length} locais`
+                return (
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, background: '#1a1712', color: '#6a5f52', fontSize: 10 }}>
+                      <MapPin size={9} />{label}
+                    </span>
+                  </div>
+                )
+              })()}
               <div style={{ fontSize: 11, color: '#9a8f82', marginBottom: 10 }}>{[w.region, w.country].filter(Boolean).join(', ')}{w.year ? ` · ${w.year}` : ''}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Stars value={w.personalRating} size={12} />
@@ -3005,6 +3114,7 @@ export default function App() {
   const [types,            setTypes]            = useState(INIT_TYPES)
   const [suppliers,        setSuppliers]        = useState([])
   const [locations,        setLocations]        = useState([])
+  const [wineLocations,    setWineLocations]    = useState([])
   const [countriesRegions, setCountriesRegions] = useState(COUNTRIES_REGIONS)
 
   const [view,           setView]           = useState('dashboard')
@@ -3089,13 +3199,14 @@ export default function App() {
     const load = async () => {
       if (!hasCachedData) setLoading(true)
       try {
-        const [wRes, eRes, cRes, sRes, qRes, lRes] = await Promise.all([
+        const [wRes, eRes, cRes, sRes, qRes, lRes, wlRes] = await Promise.all([
           supabase.from('videiras_wines').select('id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo').order('name'),
           supabase.from('videiras_entries').select('*').order('date', { ascending: false }),
           supabase.from('videiras_consumptions').select('*').order('date', { ascending: false }),
           supabase.from('videiras_suppliers').select('name').order('name'),
           supabase.from('videiras_quotes').select('id,quote,author,category').eq('active', true),
           supabase.from('videiras_locations').select('id,name').order('name'),
+          supabase.from('videiras_wine_locations').select('id,wine_id,location_id,quantity'),
         ])
         if (wRes.error) console.error('wines:', wRes.error)
         if (eRes.error) console.error('entries:', eRes.error)
@@ -3107,6 +3218,7 @@ export default function App() {
         else setSuppliers([...SUPPLIERS].sort((a, b) => a.localeCompare(b, 'pt')))
         if (qRes.data) setQuotes(qRes.data)
         if (lRes.data) setLocations(lRes.data)
+        if (wlRes.data) setWineLocations(wlRes.data)
         saveCache({
           wines:        wRes.data ?? [],
           entries:      eRes.data ?? [],
@@ -3140,7 +3252,16 @@ export default function App() {
   const addWine = async (d) => {
     const { data, error } = await supabase.from('videiras_wines').insert({ ...wineToDb(d), user_id: session.user.id }).select(WINE_META_SELECT).single()
     if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
-    if (data) setWines((p) => [...p, { ...wineFromDb(data), photo: d.photo ?? null }])
+    if (data) {
+      setWines((p) => [...p, { ...wineFromDb(data), photo: d.photo ?? null }])
+      const validRows = (d.locationRows || []).filter(r => r.locationId && r.quantity > 0)
+      if (validRows.length > 0) {
+        const { data: wlData } = await supabase.from('videiras_wine_locations')
+          .insert(validRows.map(r => ({ wine_id: data.id, location_id: r.locationId, quantity: r.quantity, user_id: session.user.id })))
+          .select()
+        if (wlData) setWineLocations(p => [...p, ...wlData])
+      }
+    }
     closeModal()
   }
 
@@ -3148,14 +3269,30 @@ export default function App() {
     const currentPhoto = wines.find(w => w.id === activeWine.id)?.photo
     const { data, error } = await supabase.from('videiras_wines').update(wineToDb(d)).eq('id', activeWine.id).select(WINE_META_SELECT).single()
     if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
-    if (data) setWines((p) => p.map((w) => w.id === activeWine.id ? { ...wineFromDb(data), photo: d.photo !== undefined ? (d.photo || null) : currentPhoto } : w))
+    if (data) {
+      setWines((p) => p.map((w) => w.id === activeWine.id ? { ...wineFromDb(data), photo: d.photo !== undefined ? (d.photo || null) : currentPhoto } : w))
+      await supabase.from('videiras_wine_locations').delete().eq('wine_id', activeWine.id)
+      const validRows = (d.locationRows || []).filter(r => r.locationId && r.quantity > 0)
+      if (validRows.length > 0) {
+        const { data: wlData } = await supabase.from('videiras_wine_locations')
+          .insert(validRows.map(r => ({ wine_id: activeWine.id, location_id: r.locationId, quantity: r.quantity, user_id: session.user.id })))
+          .select()
+        setWineLocations(p => [...p.filter(wl => wl.wine_id !== activeWine.id), ...(wlData || [])])
+      } else {
+        setWineLocations(p => p.filter(wl => wl.wine_id !== activeWine.id))
+      }
+    }
     closeModal()
   }
 
   const deleteWine = async (id) => {
     const wine = wines.find(w => w.id === id)
     if (wine?.photo) await deleteWinePhoto(wine.photo)
-    await supabase.from('videiras_wines').delete().eq('id', id)
+    await Promise.all([
+      supabase.from('videiras_wine_locations').delete().eq('wine_id', id),
+      supabase.from('videiras_wines').delete().eq('id', id),
+    ])
+    setWineLocations(p => p.filter(wl => wl.wine_id !== id))
     setWines((p) => p.filter((w) => w.id !== id))
     closeModal()
   }
@@ -3169,6 +3306,16 @@ export default function App() {
     ])
     if (eRes.data) setEntries((p) => [...p, entryFromDb(eRes.data)])
     if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
+    if (d.locationId) {
+      const existing = wineLocations.find(wl => wl.wine_id === activeWine.id && wl.location_id === d.locationId)
+      if (existing) {
+        const { data } = await supabase.from('videiras_wine_locations').update({ quantity: existing.quantity + d.quantity }).eq('id', existing.id).select().single()
+        if (data) setWineLocations(p => p.map(wl => wl.id === existing.id ? data : wl))
+      } else {
+        const { data } = await supabase.from('videiras_wine_locations').insert({ wine_id: activeWine.id, location_id: d.locationId, quantity: d.quantity, user_id: session.user.id }).select().single()
+        if (data) setWineLocations(p => [...p, data])
+      }
+    }
     closeModal()
     showRandomQuote('entrada')
   }
@@ -3183,6 +3330,19 @@ export default function App() {
     ])
     if (cRes.data) setConsumptions((p) => [...p, consumptionFromDb(cRes.data)])
     if (wRes.data) setWines((p) => p.map((w) => w.id !== activeWine.id ? w : wineFromDb(wRes.data)))
+    if (d.locationId) {
+      const existing = wineLocations.find(wl => wl.wine_id === activeWine.id && wl.location_id === d.locationId)
+      if (existing) {
+        const newLocQty = existing.quantity - d.quantity
+        if (newLocQty <= 0) {
+          await supabase.from('videiras_wine_locations').delete().eq('id', existing.id)
+          setWineLocations(p => p.filter(wl => wl.id !== existing.id))
+        } else {
+          const { data } = await supabase.from('videiras_wine_locations').update({ quantity: newLocQty }).eq('id', existing.id).select().single()
+          if (data) setWineLocations(p => p.map(wl => wl.id === existing.id ? data : wl))
+        }
+      }
+    }
     closeModal()
     const wineType = wine?.type?.toLowerCase()
     showRandomQuote(['tinto','branco','rosé','espumante'].includes(wineType) ? wineType : 'consumo')
@@ -3422,8 +3582,8 @@ export default function App() {
                 </div>
               </div>
               {listMode === 'list'
-                ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} isMobile={isMobile} />
-                : <WineGridView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} />}
+                ? <WineListView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} isMobile={isMobile} wineLocations={wineLocations} locations={locations} />
+                : <WineGridView wines={filtered} onWineClick={(w) => { setActiveWine(w); setModal('detail') }} wineLocations={wineLocations} locations={locations} />}
             </>
           )}
 
@@ -3582,13 +3742,13 @@ export default function App() {
       {/* MODALS */}
       {modal && (
         <ModalShell onClose={closeModal} isMobile={isMobile}>
-          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} />}
-          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} />}
-          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} session={session} />}
-          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} session={session} />}
-          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} />}
-          {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} />}
+          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={(w) => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} />}
+          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={editWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={(e) => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={(c) => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={addEntry} onClose={closeModal} session={session} locations={locations} />}
+          {modal === 'editEntry'    && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={(d) => editEntry(activeEntry, d)} onClose={closeModal} session={session} locations={locations} />}
+          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={addConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'editCons'    && liveWine && activeCons   && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={(d) => editConsumption(activeCons, d)} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
         </ModalShell>
       )}
     </div>

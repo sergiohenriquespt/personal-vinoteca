@@ -3257,7 +3257,7 @@ export default function App() {
       const validRows = (d.locationRows || []).filter(r => r.locationId && r.quantity > 0)
       if (validRows.length > 0) {
         const { data: wlData } = await supabase.from('videiras_wine_locations')
-          .insert(validRows.map(r => ({ wine_id: data.id, location_id: r.locationId, quantity: r.quantity, user_id: session.user.id })))
+          .insert(validRows.map(r => ({ wine_id: data.id, location_id: r.locationId, quantity: r.quantity })))
           .select()
         if (wlData) setWineLocations(p => [...p, ...wlData])
       }
@@ -3275,7 +3275,7 @@ export default function App() {
       const validRows = (d.locationRows || []).filter(r => r.locationId && r.quantity > 0)
       if (validRows.length > 0) {
         const { data: wlData } = await supabase.from('videiras_wine_locations')
-          .insert(validRows.map(r => ({ wine_id: activeWine.id, location_id: r.locationId, quantity: r.quantity, user_id: session.user.id })))
+          .insert(validRows.map(r => ({ wine_id: activeWine.id, location_id: r.locationId, quantity: r.quantity })))
           .select()
         setWineLocations(p => [...p.filter(wl => wl.wine_id !== activeWine.id), ...(wlData || [])])
       } else {
@@ -3312,7 +3312,7 @@ export default function App() {
         const { data } = await supabase.from('videiras_wine_locations').update({ quantity: existing.quantity + d.quantity }).eq('id', existing.id).select().single()
         if (data) setWineLocations(p => p.map(wl => wl.id === existing.id ? data : wl))
       } else {
-        const { data } = await supabase.from('videiras_wine_locations').insert({ wine_id: activeWine.id, location_id: d.locationId, quantity: d.quantity, user_id: session.user.id }).select().single()
+        const { data } = await supabase.from('videiras_wine_locations').insert({ wine_id: activeWine.id, location_id: d.locationId, quantity: d.quantity }).select().single()
         if (data) setWineLocations(p => [...p, data])
       }
     }

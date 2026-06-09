@@ -12,7 +12,7 @@ export const TYPE_COLORS = {
 }
 export const getTC = (t) => TYPE_COLORS[t] || { fg: '#9a8f82', bg: '#1e1b16' }
 
-export const INIT_TYPES = ['Branco', 'Espumante', 'Madeira', 'Rosé', 'Tinto', 'Verde']
+export const INIT_TYPES = ['Tinto', 'Branco', 'Rosé', 'Espumante', 'Fortificado', 'Sobremesa', 'Vermute', 'Sidra']
 
 export const COUNTRIES_REGIONS = {
   Portugal:        ['Douro', 'Alentejo', 'Dão', 'Vinho Verde', 'Bairrada', 'Beira Interior', 'Lisboa', 'Setúbal', 'Tejo', 'Madeira', 'Trás-os-Montes', 'Beira', 'Bucelas', 'Alcobaça', 'Monção e Melgaço', 'Algarve', 'Península de Setúbal'],

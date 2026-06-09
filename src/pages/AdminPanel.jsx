@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Camera, Download, FileText, UserCheck, UserX, Plus, Trash2 } from 'lucide-react'
+import { Camera, Download, FileText, UserCheck, UserX, Plus, Trash2, KeyRound } from 'lucide-react'
 import { supabase, EDGE_FN_URL, PHOTO_BUCKET } from '../lib/supabase'
 import { FONT, S } from '../utils/constants'
 import Btn from '../components/ui/Btn'
@@ -73,6 +73,7 @@ export default function AdminPanel({ session, isAdmin }) {
   const [creating,     setCreating]     = useState(false)
   const [msg,          setMsg]          = useState('')
   const [backingUp,    setBackingUp]    = useState(false)
+  const [resetMsg,     setResetMsg]     = useState('')
   const [quotes,       setQuotes]       = useState([])
   const [quotesLoaded, setQuotesLoaded] = useState(false)
   const [qTab,         setQTab]         = useState('list')
@@ -203,6 +204,11 @@ export default function AdminPanel({ session, isAdmin }) {
     setImporting(false)
   }
 
+  const handlePasswordReset = async () => {
+    const { error } = await supabase.auth.resetPasswordForEmail(session.user.email, { redirectTo: window.location.origin })
+    setResetMsg(error ? `Erro: ${error.message}` : 'Email enviado. Verifica a tua caixa de correio.')
+  }
+
   const handleBackup = async () => {
     setBackingUp(true)
     try {
@@ -302,7 +308,19 @@ export default function AdminPanel({ session, isAdmin }) {
 
       {adminTab === 'segurança' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <MigratePhotosCard session={session} />
+          <div style={{ ...S.stat, padding: 20, display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px 24px', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><KeyRound size={14} color="#c8963e" /> Alterar senha</div>
+              <div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>
+                Envia um email de redefinição de senha para {session.user.email}.
+                {resetMsg && <span style={{ color: resetMsg.startsWith('Erro') ? '#e87080' : '#68c880' }}> {resetMsg}</span>}
+              </div>
+            </div>
+            <button onClick={handlePasswordReset} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6, border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)', color: '#c8963e', cursor: 'pointer', fontSize: 12, fontFamily: FONT, whiteSpace: 'nowrap' }}>
+              <KeyRound size={13} /> Alterar senha
+            </button>
+          </div>
+          {(session?.user?.user_metadata?.role === 'admin' || session?.user?.app_metadata?.role === 'admin') && <MigratePhotosCard session={session} />}
           <div style={{ ...S.stat, padding: 20, display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px 24px', alignItems: 'center' }}>
             <div><div style={{ fontSize: 13, color: '#e8dece', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Download size={14} color="#c8963e" /> Exportar backup</div><div style={{ fontSize: 11, color: '#4a453f', lineHeight: 1.5 }}>Exporta todos os dados (vinhos, consumos, entradas, fornecedores) para um ficheiro JSON.</div></div>
             <button onClick={handleBackup} disabled={backingUp} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 6, border: '1px solid rgba(200,150,62,0.3)', background: 'rgba(200,150,62,0.08)', color: '#c8963e', cursor: backingUp ? 'not-allowed' : 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', opacity: backingUp ? 0.6 : 1, transition: 'all 0.15s' }}>

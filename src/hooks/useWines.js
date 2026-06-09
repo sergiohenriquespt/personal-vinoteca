@@ -1,7 +1,7 @@
 import { supabase, wineFromDb, wineToDb, deleteWinePhoto, WINE_META_SELECT } from '../lib/supabase'
 
 export function useWines({ session, wines, setWines, wineLocations, setWineLocations, closeModal }) {
-  const addWine = async (d) => {
+  const addWine = async (d, onDone) => {
     const { data, error } = await supabase
       .from('videiras_wines')
       .insert({ ...wineToDb(d), user_id: session.user.id })
@@ -9,7 +9,8 @@ export function useWines({ session, wines, setWines, wineLocations, setWineLocat
       .single()
     if (error) { alert('Erro ao guardar vinho: ' + error.message); return }
     if (data) {
-      setWines(p => [...p, { ...wineFromDb(data), photo: d.photo ?? null }])
+      const wine = { ...wineFromDb(data), photo: d.photo ?? null }
+      setWines(p => [...p, wine])
       const validRows = (d.locationRows || []).filter(r => r.locationId && r.quantity > 0)
       if (validRows.length > 0) {
         const { data: wlData } = await supabase
@@ -18,6 +19,7 @@ export function useWines({ session, wines, setWines, wineLocations, setWineLocat
           .select()
         if (wlData) setWineLocations(p => [...p, ...wlData])
       }
+      if (onDone) { onDone(wine); return }
     }
     closeModal()
   }

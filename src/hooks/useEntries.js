@@ -1,7 +1,7 @@
 import { supabase, wineFromDb, entryFromDb, entryToDb } from '../lib/supabase'
 
 export function useEntries({ session, wines, setWines, wineLocations, setWineLocations, entries, setEntries, closeModal }) {
-  const addEntry = async (d, activeWineId) => {
+  const addEntry = async (d, activeWineId, onDone) => {
     const wine = wines.find(w => w.id === activeWineId)
     const newQty = (wine?.quantity || 0) + d.quantity
     const [eRes, wRes] = await Promise.all([
@@ -9,7 +9,7 @@ export function useEntries({ session, wines, setWines, wineLocations, setWineLoc
         .insert({ ...entryToDb({ ...d, wineId: activeWineId }), user_id: session.user.id })
         .select().single(),
       supabase.from('videiras_wines')
-        .update({ quantity: newQty, purchase_price: d.price || wine?.purchasePrice || 0 })
+        .update({ quantity: newQty })
         .eq('id', activeWineId).select().single(),
     ])
     if (eRes.data) setEntries(p => [...p, entryFromDb(eRes.data)])
@@ -26,7 +26,8 @@ export function useEntries({ session, wines, setWines, wineLocations, setWineLoc
         if (data) setWineLocations(p => [...p, data])
       }
     }
-    closeModal()
+    if (onDone) onDone()
+    else closeModal()
   }
 
   const editEntry = async (originalEntry, d) => {

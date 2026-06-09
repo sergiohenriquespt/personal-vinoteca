@@ -8,7 +8,7 @@ import { useWines }        from './hooks/useWines'
 import { useEntries }      from './hooks/useEntries'
 import { useConsumptions } from './hooks/useConsumptions'
 
-import ModalShell         from './components/ui/ModalShell'
+import ModalShell, { ModalHeader } from './components/ui/ModalShell'
 import Btn                from './components/ui/Btn'
 import QuoteOverlay       from './components/QuoteOverlay'
 import AboutModal         from './components/AboutModal'
@@ -27,6 +27,26 @@ import Relatorios         from './pages/Relatorios'
 import AdminPanel         from './pages/AdminPanel'
 
 const WINE_DATA_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo,critic_ratings'
+
+function ConfirmStep({ title, message, onYes, onNo, enterToConfirm }) {
+  useEffect(() => {
+    if (!enterToConfirm) return
+    const handler = (e) => { if (e.key === 'Enter') onYes() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onYes, enterToConfirm])
+
+  return (
+    <>
+      <ModalHeader title={title} onClose={onNo} />
+      <p style={{ fontSize: 14, color: '#e8dece', margin: '0 0 28px', lineHeight: 1.6 }}>{message}</p>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <Btn variant="ghost" onClick={onNo}>Não</Btn>
+        <Btn variant="gold" onClick={onYes}>Sim</Btn>
+      </div>
+    </>
+  )
+}
 
 export default function App() {
   const [wines,            setWines]            = useState(() => { const c = loadCache(); return c?.wines?.map(wineFromDb) ?? [] })
@@ -58,6 +78,8 @@ export default function App() {
   const [activeCons,       setActiveCons]       = useState(null)
   const [activeQuote,      setActiveQuote]      = useState(null)
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [pendingPriceUpdate, setPendingPriceUpdate] = useState(null)
+  const [fromNewWine,        setFromNewWine]        = useState(false)
   const [showAbout,        setShowAbout]        = useState(false)
   const [showMobileMenu,   setShowMobileMenu]   = useState(false)
   const [showNoStock,      setShowNoStock]      = useState(() => {
@@ -123,7 +145,7 @@ export default function App() {
     load()
   }, [session?.user?.id])
 
-  const closeModal = () => { setModal(null); setActiveWine(null); setActiveEntry(null); setActiveCons(null) }
+  const closeModal = () => { setModal(null); setActiveWine(null); setActiveEntry(null); setActiveCons(null); setFromNewWine(false); setPendingPriceUpdate(null) }
 
   const showRandomQuote = (context) => {
     if (!quotes.length) return
@@ -136,7 +158,18 @@ export default function App() {
   const { addEntry, editEntry, deleteEntry } = useEntries({ session, wines, setWines, wineLocations, setWineLocations, entries, setEntries, closeModal })
   const { addConsumption, editConsumption, deleteConsumption } = useConsumptions({ session, wines, setWines, wineLocations, setWineLocations, consumptions, setConsumptions, closeModal })
 
-  const handleAddEntry = async (d) => { await addEntry(d, activeWine?.id); showRandomQuote('entrada') }
+  const handleAddEntry = async (d) => {
+    const wineId = activeWine?.id
+    await addEntry(d, wineId, () => {
+      if (d.price > 0) {
+        setPendingPriceUpdate({ wineId, price: d.price })
+        setModal('confirmPrice')
+      } else {
+        closeModal()
+        showRandomQuote('entrada')
+      }
+    })
+  }
   const handleAddConsumption = async (d) => {
     const wineType = await addConsumption(d, activeWine?.id)
     const t = wineType?.toLowerCase()
@@ -276,13 +309,37 @@ export default function App() {
 
       {modal && (
         <ModalShell onClose={closeModal} isMobile={isMobile}>
-          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={w => { setActiveWine(w); setModal('entry') }} onSave={addWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} critics={critics} />}
+          {modal === 'addWine'     && <WineForm types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={w => { setActiveWine(w); setModal('entry') }} onSave={d => addWine(d, (createdWine) => { setActiveWine(createdWine); setModal('confirmEntry') })} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} critics={critics} />}
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={d => editWine(d, activeWine.id)} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} critics={critics} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={e => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={c => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} critics={critics} />}
-          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} />}
+          {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} noPrefill={fromNewWine} />}
           {modal === 'editEntry'   && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={d => editEntry(activeEntry, d)} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
           {modal === 'editCons'    && liveWine && activeCons && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={d => editConsumption(activeCons, d)} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'confirmEntry' && liveWine && (
+            <ConfirmStep
+              title="Vinho criado"
+              message="Pretende registar uma entrada?"
+              onYes={() => { setFromNewWine(true); setModal('entry') }}
+              onNo={closeModal}
+            />
+          )}
+          {modal === 'confirmPrice' && pendingPriceUpdate && (
+            <ConfirmStep
+              title="Atualizar preço"
+              message={`Pretende atualizar o preço de compra na ficha do vinho para ${Number(pendingPriceUpdate.price).toFixed(2).replace('.', ',')}€?`}
+              onYes={async () => {
+                await supabase.from('videiras_wines')
+                  .update({ purchase_price: pendingPriceUpdate.price })
+                  .eq('id', pendingPriceUpdate.wineId)
+                setWines(p => p.map(w => w.id === pendingPriceUpdate.wineId ? { ...w, purchasePrice: pendingPriceUpdate.price } : w))
+                closeModal()
+                showRandomQuote('entrada')
+              }}
+              onNo={() => { closeModal(); showRandomQuote('entrada') }}
+              enterToConfirm
+            />
+          )}
         </ModalShell>
       )}
     </div>

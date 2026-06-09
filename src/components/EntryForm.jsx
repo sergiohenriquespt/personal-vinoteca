@@ -7,10 +7,10 @@ import Btn from './ui/Btn'
 import FilterSelect from './ui/FilterSelect'
 import { ModalHeader } from './ui/ModalShell'
 
-export default function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session, locations = [] }) {
+export default function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session, locations = [], noPrefill = false }) {
   const [f, setF] = useState(entry
     ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price), locationId: '' }
-    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: suppliers?.[0] ?? SUPPLIERS[0], price: fmtNum(wine?.purchasePrice), locationId: '' })
+    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: noPrefill ? '' : (suppliers?.[0] ?? SUPPLIERS[0]), price: noPrefill ? '' : fmtNum(wine?.purchasePrice), locationId: '' })
   const set = (k, v) => setF(p => ({ ...p, [k]: v }))
   const list = suppliers ?? SUPPLIERS
 

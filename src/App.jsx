@@ -13,7 +13,8 @@ import Btn                from './components/ui/Btn'
 import QuoteOverlay       from './components/QuoteOverlay'
 import AboutModal         from './components/AboutModal'
 import LoginScreen        from './components/LoginScreen'
-import ChangePasswordScreen from './components/ChangePasswordScreen'
+import ChangePasswordScreen  from './components/ChangePasswordScreen'
+import PasswordResetScreen   from './components/PasswordResetScreen'
 import WineForm           from './components/WineForm'
 import WineDetail         from './components/WineDetail'
 import EntryForm          from './components/EntryForm'
@@ -56,6 +57,7 @@ export default function App() {
   const [activeEntry,      setActiveEntry]      = useState(null)
   const [activeCons,       setActiveCons]       = useState(null)
   const [activeQuote,      setActiveQuote]      = useState(null)
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [showAbout,        setShowAbout]        = useState(false)
   const [showMobileMenu,   setShowMobileMenu]   = useState(false)
   const [showNoStock,      setShowNoStock]      = useState(() => {
@@ -83,6 +85,7 @@ export default function App() {
     }).catch(() => { clearTimeout(authTimeout); setAuthLoading(false) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'SIGNED_OUT') { clearCache(); setSession(null); setProfile(null); setWines([]); setEntries([]); setConsumptions([]) }
+      else if (event === 'PASSWORD_RECOVERY') { setSession(s); setShowPasswordReset(true) }
       else if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) { setSession(s); if (s?.user) loadProfile(s.user.id) }
     })
     return () => subscription.unsubscribe()
@@ -174,6 +177,7 @@ export default function App() {
       <div style={{ fontSize: 11, color: '#4a453f', letterSpacing: '0.2em', textTransform: 'uppercase' }}>A verificar sessão…</div>
     </div>
   )
+  if (showPasswordReset) return <PasswordResetScreen onDone={() => setShowPasswordReset(false)} />
   if (!session) return <LoginScreen />
   if (profile?.must_change_password) return <ChangePasswordScreen profile={profile} onDone={() => setProfile(p => ({ ...p, must_change_password: false }))} />
   if (profile && !profile.active) return (

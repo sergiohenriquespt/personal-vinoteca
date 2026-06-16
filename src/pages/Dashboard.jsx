@@ -4,6 +4,7 @@ import { fmt, fmtInt, totalV } from '../utils/format'
 import Stars from '../components/ui/Stars'
 import Badge from '../components/ui/Badge'
 import WineThumb from '../components/ui/WineThumb'
+import CountUp from '../components/ui/CountUp'
 
 function PieChart({ data, total }) {
   if (!data.length || total === 0) return null
@@ -124,14 +125,18 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
     <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
         {[
-          { l: 'Referências em stock', v: fmtInt(inStock.length),    c: '#e8dece' },
-          { l: 'Garrafas em stock',    v: fmtInt(totalBottles),       c: '#e8dece' },
-          { l: 'Valor Total',          v: fmt(totalValue),            c: '#c8963e' },
-          { l: 'Consumidas',           v: fmtInt(totalConsumed),      c: '#9a8f82' },
-        ].map(({ l, v, c }) => (
+          { l: 'Referências em stock', v: fmtInt(inStock.length),    n: inStock.length,   c: '#e8dece' },
+          { l: 'Garrafas em stock',    v: fmtInt(totalBottles),       n: totalBottles,      c: '#e8dece' },
+          { l: 'Valor Total',          v: fmt(totalValue),                                  c: '#c8963e' },
+          { l: 'Consumidas',           v: fmtInt(totalConsumed),      n: totalConsumed,     c: '#9a8f82' },
+        ].map(({ l, v, n, c }) => (
           <div key={l} style={{ ...S.stat, padding: '16px 18px' }}>
             <div style={{ fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
-            <div style={{ fontSize: 26, fontWeight: 300, color: c, fontFamily: FONT, letterSpacing: '-0.03em' }}>{v}</div>
+            <div style={{ fontSize: 26, fontWeight: 300, color: c, fontFamily: FONT, letterSpacing: '-0.03em' }}>
+              {n !== undefined
+                ? <CountUp from={0} to={n} duration={1.2} separator="." startWhen={n > 0} />
+                : v}
+            </div>
           </div>
         ))}
       </div>

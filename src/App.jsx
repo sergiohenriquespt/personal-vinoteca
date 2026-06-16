@@ -266,7 +266,9 @@ export default function App() {
           <h1 style={{ margin: 0, fontSize: 12, fontWeight: 400, color: '#6a6058', fontFamily: FONT, letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
             {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos', relatorios: 'Relatórios', definicoes: 'Definições' }[view]}
           </h1>
-          {view === 'adega' && <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>}
+          {view === 'adega'    && <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>}
+          {view === 'entradas' && <Btn variant="gold" onClick={() => { setActiveWine(null); setModal('newEntry') }}><Plus size={13} />{!isMobile && 'Nova Entrada'}</Btn>}
+          {view === 'consumos' && <Btn variant="gold" onClick={() => { setActiveWine(null); setModal('newCons')  }}><Plus size={13} />{!isMobile && 'Novo Consumo'}</Btn>}
           {isMobile && <button onClick={() => setShowMobileMenu(true)} style={{ background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', padding: 4, display: 'flex', transition: 'color 0.15s' }} onMouseEnter={e => e.currentTarget.style.color = '#c8963e'} onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}><UserCheck size={16} /></button>}
         </div>
 
@@ -313,8 +315,10 @@ export default function App() {
           {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={types} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={d => editWine(d, activeWine.id)} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} critics={critics} />}
           {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={() => { if (window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={e => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={c => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} critics={critics} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} noPrefill={fromNewWine} />}
+          {modal === 'newEntry'    && <EntryForm wine={activeWine} allowWineSelection={true} onWineChange={w => setActiveWine(w)} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'editEntry'   && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={d => editEntry(activeEntry, d)} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'newCons'     && <ConsumptionForm wine={activeWine} allowWineSelection={true} onWineChange={w => setActiveWine(w)} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
           {modal === 'editCons'    && liveWine && activeCons && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={d => editConsumption(activeCons, d)} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
           {modal === 'confirmEntry' && liveWine && (
             <ConfirmStep

@@ -97,7 +97,7 @@ export default function WineDetail({ wine, entries, consumptions, onClose, onEnt
                   const score = cr[c.abbrev]
                   const col = score >= 95 ? '#c8963e' : score >= 90 ? '#e8dece' : '#6a5f52'
                   return (
-                    <div key={c.abbrev} style={{ background: '#161310', border: '0.5px solid #2a2520', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
+                    <div key={c.abbrev} title={c.name} style={{ background: '#161310', border: '0.5px solid #2a2520', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
                       <div style={{ fontSize: 9, color: '#6a5f52', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>{c.abbrev}</div>
                       <div style={{ fontSize: 22, fontWeight: 300, color: col, lineHeight: 1, fontFamily: FONT, marginBottom: 4 }}>{score}</div>
                       <div style={{ fontSize: 8, color: '#3a3530', letterSpacing: '0.02em' }}>{c.name}</div>

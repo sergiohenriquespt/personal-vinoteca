@@ -5,6 +5,7 @@ import { S } from '../utils/constants'
 import Btn from './ui/Btn'
 import Stars from './ui/Stars'
 import { ModalHeader } from './ui/ModalShell'
+import WineSearchSelect from './ui/WineSearchSelect'
 
 export default function ConsumptionForm({ wine, consumption, onSave, onClose, wineLocations = [], locations = [], allowWineSelection = false, onWineChange }) {
   const [selectedWine, setSelectedWine] = useState(null)
@@ -20,12 +21,11 @@ export default function ConsumptionForm({ wine, consumption, onSave, onClose, wi
 
   useEffect(() => {
     if (!allowWineSelection) return
-    supabase.from('videiras_wines').select('id,name,year,quantity,personal_rating').gt('quantity', 0).order('name')
+    supabase.from('videiras_wines').select('id,name,year,quantity,personal_rating,producer').gt('quantity', 0).order('name')
       .then(({ data }) => setWineOptions(data || []))
   }, [allowWineSelection])
 
-  const handleWineSelect = (id) => {
-    const row = wineOptions.find(x => x.id === id)
+  const handleWineSelect = (row) => {
     if (!row) { setSelectedWine(null); onWineChange?.(null); return }
     const w = { id: row.id, name: row.name, year: row.year, quantity: row.quantity, personalRating: row.personal_rating || 0 }
     setSelectedWine(w)
@@ -39,10 +39,11 @@ export default function ConsumptionForm({ wine, consumption, onSave, onClose, wi
       {allowWineSelection && (
         <div style={S.field}>
           <label style={S.lbl}>Vinho</label>
-          <select style={{ ...S.inp, cursor: 'pointer' }} value={selectedWine?.id || ''} onChange={e => handleWineSelect(e.target.value)}>
-            <option value="">— Seleccionar vinho —</option>
-            {wineOptions.map(w => <option key={w.id} value={w.id}>{w.name}{w.year ? ` (${w.year})` : ''} — {w.quantity} {w.quantity === 1 ? 'garrafa' : 'garrafas'}</option>)}
-          </select>
+          <WineSearchSelect
+            wines={wineOptions}
+            onSelect={handleWineSelect}
+            renderOption={w => `${w.name}${w.year ? ` (${w.year})` : ''} — ${w.quantity} ${w.quantity === 1 ? 'garrafa' : 'garrafas'}`}
+          />
         </div>
       )}
       <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>

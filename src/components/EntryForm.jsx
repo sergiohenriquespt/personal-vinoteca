@@ -6,6 +6,7 @@ import { fmtNum } from '../utils/format'
 import Btn from './ui/Btn'
 import FilterSelect from './ui/FilterSelect'
 import { ModalHeader } from './ui/ModalShell'
+import WineSearchSelect from './ui/WineSearchSelect'
 
 export default function EntryForm({ wine, entry, suppliers, setSuppliers, entries, onSave, onClose, session, locations = [], noPrefill = false, allowWineSelection = false, onWineChange }) {
   const [selectedWine, setSelectedWine] = useState(null)
@@ -20,12 +21,11 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
 
   useEffect(() => {
     if (!allowWineSelection) return
-    supabase.from('videiras_wines').select('id,name,year,purchase_price').order('name')
+    supabase.from('videiras_wines').select('id,name,year,purchase_price,producer').order('name')
       .then(({ data }) => setWineOptions(data || []))
   }, [allowWineSelection])
 
-  const handleWineSelect = (id) => {
-    const row = wineOptions.find(x => x.id === id)
+  const handleWineSelect = (row) => {
     if (!row) { setSelectedWine(null); onWineChange?.(null); return }
     const w = { id: row.id, name: row.name, year: row.year, purchasePrice: parseFloat(row.purchase_price) || 0 }
     setSelectedWine(w)
@@ -39,10 +39,11 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
       {allowWineSelection && (
         <div style={S.field}>
           <label style={S.lbl}>Vinho</label>
-          <select style={{ ...S.inp, cursor: 'pointer' }} value={selectedWine?.id || ''} onChange={e => handleWineSelect(e.target.value)}>
-            <option value="">— Seleccionar vinho —</option>
-            {wineOptions.map(w => <option key={w.id} value={w.id}>{w.name}{w.year ? ` (${w.year})` : ''}</option>)}
-          </select>
+          <WineSearchSelect
+            wines={wineOptions}
+            onSelect={handleWineSelect}
+            renderOption={w => `${w.name}${w.year ? ` (${w.year})` : ''}`}
+          />
         </div>
       )}
       <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>

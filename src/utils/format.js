@@ -9,7 +9,6 @@ export const pdfInt = (n) => n == null ? '—' : String(Math.round(n))
 export const pdfFmt = (n) => n != null ? pdfN(n) + ' €' : '—'
 
 export const totalV = (w) => (w.purchasePrice || 0) * (w.quantity || 0)
-export const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1
 
 export const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader()

@@ -5,7 +5,7 @@ import { applyPlugin } from 'jspdf-autotable'
 applyPlugin(jsPDF)
 import { TrendingUp, FileText, Download } from 'lucide-react'
 import { FONT, S, TYPE_COLORS } from '../utils/constants'
-import { fmt, fmtInt, pdfN, pdfInt, pdfFmt } from '../utils/format'
+import { fmt, fmtInt, pdfN, pdfInt, pdfFmt, totalV } from '../utils/format'
 import Badge from '../components/ui/Badge'
 
 // ─── PDF HELPERS ──────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ const pdfAutoTableOptions = (margin) => ({
 function StockReport({ wines, isMobile }) {
   const inStock     = wines.filter(w => w.quantity > 0).sort((a, b) => a.name.localeCompare(b.name, 'pt'))
   const totalBottles = inStock.reduce((s, w) => s + w.quantity, 0)
-  const totalValue   = inStock.reduce((s, w) => s + w.purchasePrice * w.quantity, 0)
+  const totalValue   = inStock.reduce((s, w) => s + totalV(w), 0)
   const totalRefs    = inStock.length
   const byType = inStock.reduce((acc, w) => {
     if (!acc[w.type]) acc[w.type] = { bottles: 0, value: 0, refs: 0 }
@@ -188,7 +188,7 @@ function StockReport({ wines, isMobile }) {
 function CatalogoReport({ wines, isMobile }) {
   const allWines    = [...wines].sort((a, b) => a.name.localeCompare(b.name, 'pt'))
   const totalBottles = allWines.reduce((s, w) => s + w.quantity, 0)
-  const totalValue   = allWines.reduce((s, w) => s + w.purchasePrice * w.quantity, 0)
+  const totalValue   = allWines.reduce((s, w) => s + totalV(w), 0)
   const totalRefs    = allWines.length
   const byType = allWines.reduce((acc, w) => {
     if (!acc[w.type]) acc[w.type] = { bottles: 0, value: 0, refs: 0 }

@@ -78,6 +78,8 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
   const totalBottles  = wines.reduce((s, w) => s + w.quantity, 0)
   const totalValue    = inStock.reduce((s, w) => s + totalV(w), 0)
   const totalConsumed = consumptions.reduce((s, c) => s + c.quantity, 0)
+  const withMarketPrice = inStock.filter(w => w.marketPrice != null)
+  const marketValue   = withMarketPrice.length ? withMarketPrice.reduce((s, w) => s + w.marketPrice * w.quantity, 0) : null
 
   const byTypeStock = inStock.reduce((acc, w) => {
     if (!acc[w.type]) acc[w.type] = { bottles: 0 }
@@ -128,6 +130,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
           { l: 'Referências em stock', v: fmtInt(inStock.length),    n: inStock.length,   c: '#e8dece' },
           { l: 'Garrafas em stock',    v: fmtInt(totalBottles),       n: totalBottles,      c: '#e8dece' },
           { l: 'Valor Total',          v: fmt(totalValue),                                  c: '#c8963e' },
+          { l: 'Valor de Mercado',     v: fmt(marketValue),                                 c: '#c8963e' },
           { l: 'Consumidas',           v: fmtInt(totalConsumed),      n: totalConsumed,     c: '#9a8f82' },
         ].map(({ l, v, n, c }) => (
           <div key={l} style={{ ...S.stat, padding: '16px 18px' }}>

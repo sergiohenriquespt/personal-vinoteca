@@ -19,7 +19,7 @@ export default function ModalShell({ onClose, children, isMobile }) {
           background: '#1e1b16', border: '1px solid rgba(255,255,255,0.1)',
           fontFamily: FONT, overflowY: 'auto',
           ...(isMobile
-            ? { width: '100%', maxHeight: '92vh', borderRadius: '16px 16px 0 0', padding: '20px 16px 32px', overflowX: 'hidden' }
+            ? { width: '100%', maxWidth: '100vw', boxSizing: 'border-box', maxHeight: '92vh', borderRadius: '16px 16px 0 0', padding: '20px 16px 32px', overflowX: 'hidden' }
             : { borderRadius: 14, padding: '28px 28px 24px', width: '100%', maxWidth: 560, maxHeight: 'calc(100vh - 48px)' })
         }}>
         {children}

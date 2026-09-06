@@ -51,7 +51,7 @@ export const bottleLabel = (ml) => BOTTLE_SIZES.find((b) => b.ml === ml)?.label 
 export const S = {
   inp: {
     width: '100%', background: '#0d0b09', border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: 6, color: '#e8dece', padding: '8px 12px', fontSize: 14,
+    borderRadius: 6, color: '#e8dece', padding: '8px 12px', fontSize: 16,
     outline: 'none', boxSizing: 'border-box', fontFamily: FONT,
   },
   lbl: {

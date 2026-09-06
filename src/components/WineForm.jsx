@@ -311,7 +311,7 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
                 <div key={c.abbrev} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'rgba(200,150,62,0.06)', border: '1px solid rgba(200,150,62,0.22)', borderRadius: 8, padding: '8px 10px', minWidth: 60 }}>
                   <span style={{ fontSize: 9, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{c.abbrev}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <input style={{ ...S.inp, width: 44, textAlign: 'center', padding: '3px 4px', fontSize: 14, fontWeight: 300 }}
+                    <input style={{ ...S.inp, width: 44, textAlign: 'center', padding: '3px 4px', fontSize: 16, fontWeight: 300 }}
                       type="number" min={0} max={c.scale} value={f.criticRatings[c.abbrev]}
                       onChange={e => set('criticRatings', { ...(f.criticRatings || {}), [c.abbrev]: e.target.value })} />
                     <button onClick={() => { const { [c.abbrev]: _, ...rest } = f.criticRatings || {}; set('criticRatings', rest) }}

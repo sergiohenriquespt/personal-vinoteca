@@ -22,7 +22,7 @@ export default function FilterSelect({ placeholder, value, onChange, options, on
   if (adding) return (
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
       <input
-        style={{ ...S.inp, width: 110, padding: '6px 8px', fontSize: 12 }}
+        style={{ ...S.inp, width: 110, padding: '6px 8px', fontSize: 16 }}
         value={newVal} onChange={e => setNewVal(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') setAdding(false) }}
         placeholder="Novo…" autoFocus
@@ -35,7 +35,7 @@ export default function FilterSelect({ placeholder, value, onChange, options, on
   return (
     <div style={{ display: 'flex', gap: fill ? 6 : 3, alignItems: fill ? undefined : 'center', width: fill ? '100%' : undefined }}>
       <select
-        style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: fill ? 14 : 12, cursor: 'pointer', paddingRight: 24 }}
+        style={{ ...S.inp, width: fill ? undefined : 'auto', flex: fill ? 1 : undefined, minWidth: fill ? 0 : undefined, fontSize: 16, cursor: 'pointer', paddingRight: 24 }}
         value={value} onChange={e => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map(o => <option key={o}>{o}</option>)}

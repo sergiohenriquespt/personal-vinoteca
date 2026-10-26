@@ -63,17 +63,17 @@ export const entryToDb = (e) => ({
 
 export const consumptionFromDb = (r) => ({
   id: r.id, wineId: r.wine_id, date: r.date, quantity: r.quantity,
-  rating: r.rating != null ? parseFloat(r.rating) : 0, notes: r.notes || '',
+  rating: r.rating != null ? parseFloat(r.rating) : 0, notes: r.notes || '', locationId: r.location_id || null,
 })
 
 export const consumptionToDb = (c) => ({
   wine_id: c.wineId, date: c.date, quantity: c.quantity,
-  rating: c.rating || null, notes: c.notes || '',
+  rating: c.rating || null, notes: c.notes || '', location_id: c.locationId || null,
 })
 
 export const getWineLocationData = (wineId, wineLocations, locations) =>
   wineLocations
-    .filter(wl => wl.wine_id === wineId)
+    .filter(wl => wl.wine_id === wineId && wl.quantity > 0)
     .map(wl => ({ ...wl, name: locations.find(l => l.id === wl.location_id)?.name }))
     .filter(wl => wl.name)
 

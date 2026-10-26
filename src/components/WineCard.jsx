@@ -83,7 +83,7 @@ export function WineListView({ wines, onWineClick, isMobile, wineLocations = [],
 
   const sorted = useMemo(() => {
     const getLocKey = (w) => {
-      const names = wineLocations.filter(wl => wl.wine_id === w.id)
+      const names = wineLocations.filter(wl => wl.wine_id === w.id && wl.quantity > 0)
         .map(wl => locations.find(l => l.id === wl.location_id)?.name).filter(Boolean).sort()
       return names[0] || ''
     }

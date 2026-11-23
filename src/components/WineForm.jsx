@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Check, X, Camera, Search, ExternalLink, Trash2, ChevronDown, Plus, MapPin, Wine } from 'lucide-react'
+import { Check, X, Camera, Search, ExternalLink, Trash2, ChevronDown, ChevronLeft, ChevronRight, Plus, MapPin, Wine } from 'lucide-react'
 import { supabase, isStorageUrl, uploadWinePhoto, deleteWinePhoto, ESTIMATE_FN_URL } from '../lib/supabase'
 import { FONT, S, BOTTLE_SIZES, COUNTRIES_REGIONS, getTC, chipStyle } from '../utils/constants'
 import { fmtNum } from '../utils/format'
@@ -86,6 +86,30 @@ function PhotoUpload({ value, onChange, userId }) {
   )
 }
 
+const STEPS = ['Identificação e Preços', 'Detalhes', 'Avaliação']
+
+// Indicador de passos da criação; cada passo é clicável (só depois de haver nome)
+function StepBar({ step, setStep, canAdvance }) {
+  return (
+    <div role="tablist" aria-label="Passos" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 4, padding: 4, background: '#0d0b09', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 14 }}>
+      {STEPS.map((label, i) => {
+        const on = i === step, done = i < step, off = i > 0 && !canAdvance
+        return (
+          <button key={label} type="button" role="tab" aria-selected={on} disabled={off} onClick={() => setStep(i)}
+            style={{ minHeight: 52, borderRadius: 12, border: 'none', padding: '6px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: FONT, cursor: off ? 'not-allowed' : 'pointer', opacity: off ? 0.45 : 1,
+              background: on ? '#2e2920' : 'transparent', color: on ? '#e8dece' : '#9a8f82' }}>
+            <span style={{ width: 24, height: 24, borderRadius: 12, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: on || done ? '#c8963e' : 'transparent', color: on || done ? '#0d0b09' : '#9a8f82', border: on || done ? 'none' : '1px solid rgba(255,255,255,0.15)' }}>
+              {done ? <Check size={14} strokeWidth={3} /> : i + 1}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, lineHeight: 1.2, textAlign: 'center' }}>{label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // Cada secção é um cartão. Fica fora do WineForm: um componente definido lá dentro remontava os inputs a cada tecla.
 function Section({ title, collapsible, open = true, onToggle, children }) {
   return (
@@ -108,6 +132,11 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
   // Só Preços & Stock abre expandido; as restantes secções opcionais começam fechadas
   const [open, setOpen] = useState({ precos: true, tech: false, aval: false })
   const toggle = (k) => () => setOpen(p => ({ ...p, [k]: !p[k] }))
+  // Criação em 3 passos; a edição mantém as secções expansíveis para ir direto ao campo
+  const wizard = !wine
+  const [step, setStepRaw] = useState(0)
+  const topRef = useRef()
+  const setStep = (i) => { setStepRaw(i); topRef.current?.scrollIntoView({ block: 'start' }) }
   const [newType,      setNewType]      = useState('')
   const [addingType,   setAddingType]   = useState(false)
   const [locationRows,          setLocationRows]          = useState(wineLocationRows)
@@ -196,9 +225,13 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
 
   return (
     <>
+      <div ref={topRef} />
       <ModalHeader title={wine ? 'Editar Vinho' : 'Novo Vinho'} onClose={onClose} />
+      {wizard && <StepBar step={step} setStep={setStep} canAdvance={!!f.name.trim()} />}
 
-      <Section title="Identificação">
+      {/* altura estável entre passos no desktop: o modal não salta nem muda de posição */}
+      <div style={wizard && !isMobile ? { minHeight: 'min(600px, 60vh)' } : undefined}>
+      {(!wizard || step === 0) && <Section title="Identificação">
         <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', marginBottom: 14 }}>
           <PhotoUpload value={f.photo} onChange={v => set('photo', v)} userId={session?.user?.id} />
           {wine && <StockSummary quantity={wine.quantity} rows={wineLocationRows} locations={locations} />}
@@ -242,7 +275,7 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
             <FilterSelect fill placeholder={regions.length ? 'Seleccionar região' : 'Livre'} value={f.region} onChange={v => set('region', v)} options={regions} onAdd={addRegionForm} />
           </div>
         </div>
-      </Section>
+      </Section>}
 
       {/* Na criação, as localizações são definidas pela entrada (EntryForm); aqui só se corrigem na edição */}
       {wine && <Section title="Localizações">
@@ -288,7 +321,7 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
         )}
       </Section>}
 
-      <Section title="Preços" collapsible open={open.precos} onToggle={toggle('precos')}>
+      {(!wizard || step === 0) && <Section title="Preços" collapsible={!wizard} open={wizard || open.precos} onToggle={toggle('precos')}>
         <div style={grid}>
           <div><label style={S.lbl}>Preço de Compra (€)</label><input style={S.inp} inputMode="decimal" value={f.purchasePrice} onChange={e => set('purchasePrice', e.target.value)} placeholder="0,00" /></div>
           <div>
@@ -306,9 +339,9 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
             </div>
           </div>
         </div>
-      </Section>
+      </Section>}
 
-      <Section title="Detalhes Técnicos" collapsible open={open.tech} onToggle={toggle('tech')}>
+      {(!wizard || step === 1) && <Section title="Detalhes Técnicos" collapsible={!wizard} open={wizard || open.tech} onToggle={toggle('tech')}>
         <div style={grid}>
           <div><label style={S.lbl}>Produtor</label><input style={S.inp} value={f.producer} onChange={e => set('producer', e.target.value)} placeholder="Ex: Quinta do Crasto" /></div>
           <div><label style={S.lbl}>Enólogo</label><input style={S.inp} value={f.winemaker} onChange={e => set('winemaker', e.target.value)} placeholder="Ex: Domingos Soares Franco" /></div>
@@ -321,9 +354,9 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
             </select>
           </div>
         </div>
-      </Section>
+      </Section>}
 
-      <Section title="Avaliação" collapsible open={open.aval} onToggle={toggle('aval')}>
+      {(!wizard || step === 2) && <Section title="Avaliação" collapsible={!wizard} open={wizard || open.aval} onToggle={toggle('aval')}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 14 }}>
           <div>
             <label style={S.lbl}>Classificação Pessoal</label>
@@ -387,11 +420,24 @@ export default function WineForm({ wine, types, setTypes, countriesRegions, setC
           <label style={S.lbl}>Notas</label>
           <textarea style={{ ...S.inp, minHeight: 96, resize: 'vertical' }} value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Notas de prova, potencial de guarda…" />
         </div>
-      </Section>
+      </Section>}
+      </div>
 
       {onDelete && <Btn variant="danger" onClick={onDelete} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}><Trash2 size={18} />Eliminar vinho</Btn>}
       <div className="vt-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-        <Btn variant="gold" onClick={handleSave}><Check size={20} />{wine ? 'Guardar' : 'Adicionar Vinho'}</Btn>
+        {wizard && step > 0 && (
+          <button type="button" aria-label="Passo anterior" onClick={() => setStep(step - 1)}
+            style={{ flex: '0 0 54px', width: 54, minHeight: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#e8dece', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+            <ChevronLeft size={22} />
+          </button>
+        )}
+        {wizard && step < STEPS.length - 1
+          ? <>
+              {/* Guardar já: os passos seguintes são opcionais */}
+              <Btn onClick={handleSave} disabled={!f.name.trim()}><Check size={20} />Guardar</Btn>
+              <Btn variant="gold" onClick={() => setStep(step + 1)} disabled={!f.name.trim()}>Seguinte<ChevronRight size={20} /></Btn>
+            </>
+          : <Btn variant="gold" onClick={handleSave} disabled={!f.name.trim()}><Check size={20} />{wine ? 'Guardar' : 'Adicionar Vinho'}</Btn>}
       </div>
     </>
   )

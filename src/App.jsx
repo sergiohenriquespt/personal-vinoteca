@@ -31,7 +31,7 @@ import Sidebar            from './components/Sidebar'
 
 const WINE_DATA_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo,critic_ratings'
 
-function ConfirmStep({ title, message, onYes, onNo, enterToConfirm }) {
+function ConfirmStep({ title, message, onYes, onNo, enterToConfirm, yesLabel = 'Sim', noLabel = 'Não' }) {
   useEffect(() => {
     if (!enterToConfirm) return
     const handler = (e) => { if (e.key === 'Enter') onYes() }
@@ -44,8 +44,8 @@ function ConfirmStep({ title, message, onYes, onNo, enterToConfirm }) {
       <ModalHeader title={title} onClose={onNo} />
       <p style={{ fontSize: 14, color: '#e8dece', margin: '0 0 28px', lineHeight: 1.6 }}>{message}</p>
       <div className="vt-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Btn variant="ghost" onClick={onNo}>Não</Btn>
-        <Btn variant="gold" onClick={onYes}>Sim</Btn>
+        <Btn variant="ghost" onClick={onNo}>{noLabel}</Btn>
+        <Btn variant="gold" onClick={onYes}>{yesLabel}</Btn>
       </div>
     </>
   )
@@ -289,7 +289,9 @@ export default function App() {
           {modal === 'confirmEntry' && liveWine && (
             <ConfirmStep
               title="Vinho criado"
-              message="Pretende registar uma entrada?"
+              message={`«${liveWine.name}» foi adicionado com 0 garrafas. O stock entra pelas entradas — registar a primeira agora?`}
+              yesLabel="Registar entrada"
+              noLabel="Agora não"
               onYes={() => { setFromNewWine(true); setModal('entry') }}
               onNo={closeModal}
             />

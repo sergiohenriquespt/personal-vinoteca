@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { LogIn } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { FONT, S, SUPPLIERS } from '../utils/constants'
+import { S, SUPPLIERS } from '../utils/constants'
 import { fmtNum, localISODate } from '../utils/format'
 import Btn from './ui/Btn'
+import Stepper from './ui/Stepper'
+import { ChoiceTile, DateQuickPick } from './ui/Choice'
 import FilterSelect from './ui/FilterSelect'
 import { ModalHeader } from './ui/ModalShell'
 import WineSearchSelect from './ui/WineSearchSelect'
@@ -33,6 +35,9 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
     onWineChange?.(w)
   }
 
+  // uma entrada nova tem de ir para uma localização (quando existem localizações)
+  const missingLocation = !entry && locations.length > 0 && !f.locationId
+
   return (
     <>
       <ModalHeader title={entry ? 'Editar Entrada' : 'Registar Entrada'} subtitle={effectiveWine ? `${effectiveWine.name} · ${effectiveWine.year}` : undefined} onClose={onClose} />
@@ -46,13 +51,18 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
           />
         </div>
       )}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
-        <div style={{ flex: 1 }}><label style={S.lbl}>Data</label><input style={S.inp} type="date" value={f.date} onChange={e => set('date', e.target.value)} /></div>
-        <div style={{ width: 80, flexShrink: 0 }}><label style={S.lbl}>Quantidade</label><input style={S.inp} type="number" min={1} value={f.quantity} onChange={e => set('quantity', e.target.value)} /></div>
+      <div style={S.field}>
+        <label style={S.lbl}>Quantidade</label>
+        <Stepper value={f.quantity} min={1} onChange={v => set('quantity', v)} />
+      </div>
+      <div style={S.field}>
+        <label style={S.lbl}>Data</label>
+        <DateQuickPick value={f.date} onChange={v => set('date', v)} />
       </div>
       <div style={S.field}>
         <label style={S.lbl}>Fornecedor</label>
         <FilterSelect
+          fill
           placeholder="Seleccionar fornecedor"
           value={f.supplier}
           onChange={v => set('supplier', v)}
@@ -71,25 +81,23 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
           }}
         />
       </div>
-      <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} value={f.price} onChange={e => set('price', e.target.value)} placeholder="0,00" /></div>
+      <div style={S.field}><label style={S.lbl}>Preço por Garrafa (€)</label><input style={S.inp} inputMode="decimal" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0,00" /></div>
       {!entry && locations.length > 0 && (
         <div style={S.field}>
-          <label style={S.lbl}>Localização (opcional)</label>
-          <select style={{ ...S.inp, cursor: 'pointer' }} value={f.locationId} onChange={e => set('locationId', e.target.value)}>
-            <option value="">— Sem localização —</option>
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          <label style={S.lbl}>Localização *</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {locations.map(l => <ChoiceTile key={l.id} on={f.locationId === l.id} onClick={() => set('locationId', l.id)} label={l.name} />)}
+          </div>
         </div>
       )}
       <div className="vt-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="gold" disabled={allowWineSelection && !selectedWine} onClick={() => {
-          if (!effectiveWine) return
+        <Btn variant="gold" disabled={(allowWineSelection && !selectedWine) || missingLocation} onClick={() => {
+          if (!effectiveWine || missingLocation) return
           if (f.quantity >= 1) {
             if (entry || window.confirm(`Registar entrada de ${f.quantity} ${parseInt(f.quantity) === 1 ? 'garrafa' : 'garrafas'} de "${effectiveWine.name}"?`))
               onSave({ ...f, quantity: parseInt(f.quantity), price: parseFloat((f.price + '').replace(',', '.')) || 0 })
           }
-        }}><LogIn size={14} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
+        }}><LogIn size={18} />{entry ? 'Guardar' : 'Registar Entrada'}</Btn>
       </div>
     </>
   )

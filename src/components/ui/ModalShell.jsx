@@ -2,11 +2,11 @@ import React, { useRef } from 'react'
 import { X } from 'lucide-react'
 import { FONT } from '../../utils/constants'
 
-// fullScreen: só em mobile — ecrã inteiro para formulários/detalhe; sem ele, mobile usa folha inferior
+// fullScreen (formulários/detalhe): ecrã inteiro em mobile, janela larga em desktop; sem ele: folha inferior / janela estreita
 export default function ModalShell({ onClose, children, isMobile, fullScreen }) {
   const bdRef = useRef(false)
   const panel = !isMobile
-    ? { borderRadius: 14, padding: '28px 28px 24px', width: '100%', maxWidth: 560, maxHeight: 'calc(100vh - 48px)' }
+    ? { borderRadius: 24, padding: '28px 28px 0', width: '100%', maxWidth: fullScreen ? 720 : 480, maxHeight: 'calc(100vh - 48px)' }
     : fullScreen
       ? { width: '100%', height: '100dvh', borderRadius: 0, border: 'none', padding: 'max(16px, env(safe-area-inset-top)) 16px 0', overflowX: 'hidden' }
       : { width: '100%', maxWidth: '100vw', maxHeight: '92dvh', borderRadius: '24px 24px 0 0', padding: '20px 16px 0', overflowX: 'hidden' }
@@ -20,7 +20,7 @@ export default function ModalShell({ onClose, children, isMobile, fullScreen }) 
           ? { alignItems: 'flex-end', justifyContent: 'stretch' }
           : { alignItems: 'center', justifyContent: 'center', padding: '24px 16px' })
       }}>
-      <div onClick={e => e.stopPropagation()} className={isMobile ? 'vt-m' : undefined}
+      <div onClick={e => e.stopPropagation()} className="vt-m"
         style={{
           background: '#1e1b16', border: '1px solid rgba(255,255,255,0.1)',
           fontFamily: FONT, overflowY: 'auto', boxSizing: 'border-box',
@@ -28,7 +28,7 @@ export default function ModalShell({ onClose, children, isMobile, fullScreen }) 
         }}>
         {children}
         {/* espaço final quando o formulário não tem barra de ações fixa */}
-        {isMobile && <div className="vt-endpad" style={{ height: 'max(16px, env(safe-area-inset-bottom))' }} />}
+        <div className="vt-endpad" style={{ height: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 24 }} />
       </div>
     </div>
   )

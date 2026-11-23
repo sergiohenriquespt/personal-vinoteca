@@ -1,8 +1,6 @@
 import React from 'react'
-import { FONT, S, PIE_PALETTE, getTC } from '../utils/constants'
+import { FONT, PIE_PALETTE, getTC } from '../utils/constants'
 import { fmt, fmtInt, totalV } from '../utils/format'
-import Stars from '../components/ui/Stars'
-import Badge from '../components/ui/Badge'
 import WineThumb from '../components/ui/WineThumb'
 import CountUp from '../components/ui/CountUp'
 
@@ -15,18 +13,18 @@ function PieChart({ data, total }) {
     const color = PIE_PALETTE[0]
     return (
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-        <svg viewBox="0 0 180 180" style={{ width: 150, flexShrink: 0 }}>
+        <svg viewBox="0 0 180 180" style={{ width: 160, flexShrink: 0 }}>
           <circle cx={cx} cy={cy} r={R} fill={color} opacity={0.82} />
           <circle cx={cx} cy={cy} r={r - 2} fill="#1e1b16" />
           <text x={cx} y={cy - 5} textAnchor="middle" fill="#e8dece" fontSize="20" fontWeight="300" fontFamily="Outfit,sans-serif">{total}</text>
           <text x={cx} y={cy + 12} textAnchor="middle" fill="#9a8f82" fontSize="8.5" fontFamily="Outfit,sans-serif" letterSpacing="0.1">REF.</text>
         </svg>
-        <div style={{ flex: 1, minWidth: 100 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0, opacity: 0.82 }} />
-            <span style={{ fontSize: 12, color: '#e8dece', flex: 1 }}>{data[0].label}</span>
-            <span style={{ fontSize: 11, color: '#9a8f82' }}>{data[0].value}</span>
-            <span style={{ fontSize: 10, color: '#4a453f', minWidth: 28, textAlign: 'right' }}>100%</span>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '10px minmax(0, 1fr) 40px 44px', alignItems: 'center', columnGap: 10, marginBottom: 10, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: color, opacity: 0.82 }} />
+            <span style={{ fontSize: 15, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data[0].label}</span>
+            <span style={{ fontSize: 14, color: '#9a8f82', textAlign: 'right' }}>{data[0].value}</span>
+            <span style={{ fontSize: 13, color: '#9a8f82', textAlign: 'right' }}>100%</span>
           </div>
         </div>
       </div>
@@ -51,7 +49,7 @@ function PieChart({ data, total }) {
   })
   return (
     <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-      <svg viewBox="0 0 180 180" style={{ width: 150, flexShrink: 0 }}>
+      <svg viewBox="0 0 180 180" style={{ width: 160, flexShrink: 0 }}>
         {slices.map((s, i) => (
           <path key={i} d={s.path} fill={s.color} opacity={0.82}><title>{s.label}: {s.value} ({s.pct}%)</title></path>
         ))}
@@ -59,13 +57,13 @@ function PieChart({ data, total }) {
         <text x={cx} y={cy - 5} textAnchor="middle" fill="#e8dece" fontSize="20" fontWeight="300" fontFamily="Outfit,sans-serif">{total}</text>
         <text x={cx} y={cy + 12} textAnchor="middle" fill="#9a8f82" fontSize="8.5" fontFamily="Outfit,sans-serif" letterSpacing="0.1">REF.</text>
       </svg>
-      <div style={{ flex: 1, minWidth: 100 }}>
+      <div style={{ flex: 1, minWidth: 180 }}>
         {slices.map((s, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0, opacity: 0.82 }} />
-            <span style={{ fontSize: 12, color: '#e8dece', flex: 1 }}>{s.label}</span>
-            <span style={{ fontSize: 11, color: '#9a8f82' }}>{s.value}</span>
-            <span style={{ fontSize: 10, color: '#4a453f', minWidth: 28, textAlign: 'right' }}>{s.pct}%</span>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '10px minmax(0, 1fr) 40px 44px', alignItems: 'center', columnGap: 10, marginBottom: 10, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, opacity: 0.82 }} />
+            <span style={{ fontSize: 15, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
+            <span style={{ fontSize: 14, color: '#9a8f82', textAlign: 'right' }}>{s.value}</span>
+            <span style={{ fontSize: 13, color: '#9a8f82', textAlign: 'right' }}>{s.pct}%</span>
           </div>
         ))}
       </div>
@@ -123,136 +121,115 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
   const topRegions = Object.entries(byRegion).sort((a, b) => b[1].bottles - a[1].bottles).slice(0, 8)
   const maxRegionBottles = topRegions.length ? topRegions[0][1].bottles : 1
 
+  const card = { background: '#1e1b16', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 24, padding: isMobile ? 20 : 24 }
+  const h3 = { margin: '0 0 18px', fontSize: 18, fontWeight: 500, color: '#e8dece', fontFamily: FONT }
+  const bar = (pct, color, opacity = 0.7) => (
+    <div style={{ height: 8, background: '#2a251f', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${pct}%`, background: color, opacity, borderRadius: 4, transition: 'width 0.4s ease' }} />
+    </div>
+  )
+
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
-      {isMobile && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-          <div style={{ ...S.stat, borderRadius: 24, padding: 24 }}>
-            <div style={{ fontSize: 14, color: '#9a8f82', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>Garrafas em stock</div>
-            <div style={{ fontSize: 64, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1.05, color: '#e8dece', fontFamily: FONT }}><CountUp from={0} to={totalBottles} duration={1.2} separator="." startWhen={totalBottles > 0} /></div>
-            <div style={{ fontSize: 16, color: '#9a8f82' }}>em <span style={{ color: '#e8dece' }}>{fmtInt(inStock.length)}</span> referências</div>
+    <div style={{ paddingBottom: 40, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 16 }}>
+        <div style={{ ...card, gridColumn: isMobile ? '1 / -1' : 'span 2', gridRow: isMobile ? undefined : 'span 2', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: isMobile ? 24 : 28 }}>
+          <div style={{ fontSize: 14, color: '#9a8f82', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>Garrafas em stock</div>
+          <div style={{ fontSize: isMobile ? 64 : 88, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1.05, color: '#e8dece', fontFamily: FONT }}><CountUp from={0} to={totalBottles} duration={1.2} separator="." startWhen={totalBottles > 0} /></div>
+          <div style={{ fontSize: isMobile ? 16 : 17, color: '#9a8f82' }}>em <span style={{ color: '#e8dece' }}>{fmtInt(inStock.length)}</span> referências</div>
+        </div>
+        {[
+          { l: 'Valor total',      v: fmt(totalValue),        c: '#c8963e' },
+          { l: 'Valor de mercado', v: fmt(marketValue),       c: '#c8963e' },
+          { l: 'Consumidas',       v: fmtInt(totalConsumed),  c: '#e8dece' },
+          { l: 'Gasto este mês',   v: fmt(spentThisMonth),    c: '#e8dece' },
+        ].map(({ l, v, c }) => (
+          <div key={l} style={{ ...card, borderRadius: 20, padding: isMobile ? 18 : 20 }}>
+            <div style={{ fontSize: isMobile ? 14 : 15, color: '#9a8f82' }}>{l}</div>
+            <div style={{ fontSize: isMobile ? 24 : 30, fontWeight: 300, color: c, marginTop: 6, letterSpacing: '-0.02em', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v}</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {[
-              { l: 'Valor total',      v: fmt(totalValue),        c: '#c8963e' },
-              { l: 'Valor de mercado', v: fmt(marketValue),       c: '#c8963e' },
-              { l: 'Consumidas',       v: fmtInt(totalConsumed),  c: '#e8dece' },
-              { l: 'Gasto este mês',   v: fmt(spentThisMonth),    c: '#e8dece' },
-            ].map(({ l, v, c }) => (
-              <div key={l} style={{ ...S.stat, borderRadius: 20, padding: 18 }}>
-                <div style={{ fontSize: 14, color: '#9a8f82' }}>{l}</div>
-                <div style={{ fontSize: 24, fontWeight: 300, color: c, marginTop: 6, letterSpacing: '-0.02em', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v}</div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+        <div style={card}>
+          <h3 style={h3}>Gastos</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 20 }}>
+            {[{ l: 'Este mês', v: spentThisMonth }, { l: thisYearKey, v: spentThisYear }, { l: 'Histórico', v: spentTotal }].map(({ l, v }) => (
+              <div key={l} style={{ background: '#161310', borderRadius: 12, padding: isMobile ? '10px 10px' : '12px 14px', minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: '#9a8f82' }}>{l}</div>
+                <div style={{ fontSize: isMobile ? 15 : 19, fontWeight: isMobile ? 400 : 300, color: '#c8963e', marginTop: 4, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontFamily: FONT }}>{fmt(v)}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 140 }}>
+            {last12.map(({ key, label, spent, isCurrent }) => (
+              <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
+                <div title={fmt(spent)} style={{ width: '100%', borderRadius: '6px 6px 2px 2px', background: isCurrent ? '#c8963e' : 'rgba(200,150,62,0.3)', height: spent > 0 ? `${Math.max((spent / maxMonthSpend) * 105, 4)}px` : '2px', transition: 'height 0.3s ease' }} />
+                <div style={{ fontSize: 12, color: isCurrent ? '#c8963e' : '#9a8f82', fontWeight: isCurrent ? 600 : 400 }}>{label}</div>
               </div>
             ))}
           </div>
         </div>
-      )}
-      <div className={isMobile ? 'vt-legible' : undefined}>
-      {!isMobile && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
-        {[
-          { l: 'Referências em stock', v: fmtInt(inStock.length),    n: inStock.length,   c: '#e8dece' },
-          { l: 'Garrafas em stock',    v: fmtInt(totalBottles),       n: totalBottles,      c: '#e8dece' },
-          { l: 'Valor Total',          v: fmt(totalValue),                                  c: '#c8963e' },
-          { l: 'Valor de Mercado',     v: fmt(marketValue),                                 c: '#c8963e' },
-          { l: 'Consumidas',           v: fmtInt(totalConsumed),      n: totalConsumed,     c: '#9a8f82' },
-        ].map(({ l, v, n, c }) => (
-          <div key={l} style={{ ...S.stat, padding: '16px 18px' }}>
-            <div style={{ fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
-            <div style={{ fontSize: 26, fontWeight: 300, color: c, fontFamily: FONT, letterSpacing: '-0.03em' }}>
-              {n !== undefined
-                ? <CountUp from={0} to={n} duration={1.2} separator="." startWhen={n > 0} />
-                : v}
-            </div>
-          </div>
-        ))}
-      </div>}
-
-      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Resumo de gastos</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-          {[{ l: 'Este mês', v: fmt(spentThisMonth) }, { l: thisYearKey, v: fmt(spentThisYear) }, { l: 'Histórico', v: fmt(spentTotal) }].map(({ l, v }) => (
-            <div key={l} style={{ background: '#0d0b09', borderRadius: 8, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, color: '#4a453f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
-              <div style={{ fontSize: 18, fontWeight: 300, color: '#c8963e', fontFamily: FONT, letterSpacing: '-0.02em' }}>{v}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 64 }}>
-          {last12.map(({ key, label, spent, isCurrent }) => (
-            <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-              <div title={fmt(spent)} style={{ width: '100%', borderRadius: '2px 2px 0 0', background: isCurrent ? '#c8963e' : 'rgba(200,150,62,0.25)', height: spent > 0 ? `${Math.max((spent / maxMonthSpend) * 52, 3)}px` : '2px', transition: 'height 0.3s ease' }} />
-              <div style={{ fontSize: 8.5, color: isCurrent ? '#c8963e' : '#3a3530', letterSpacing: '0.02em', textTransform: 'uppercase' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div style={{ ...S.stat, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Garrafas em stock por tipo</h3>
+        <div style={card}>
+          <h3 style={h3}>Stock por tipo</h3>
           {Object.entries(byTypeStock).sort((a, b) => b[1].bottles - a[1].bottles).map(([type, d]) => {
             const c = getTC(type)
             return (
-              <div key={type} style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: c.fg }}>{type}</span>
-                  <span style={{ fontSize: 12, color: '#9a8f82' }}>{d.bottles} gar.</span>
+              <div key={type} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 16 }}>
+                  <span style={{ color: c.fg }}>{type}</span>
+                  <span style={{ color: '#9a8f82' }}>{d.bottles} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
                 </div>
-                <div style={{ height: 3, background: '#26221c', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${(d.bottles / maxBottles) * 100}%`, background: c.fg, opacity: 0.6, borderRadius: 2 }} />
-                </div>
+                {bar((d.bottles / maxBottles) * 100, c.fg)}
               </div>
             )
           })}
         </div>
-        <div style={{ ...S.stat, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país — em stock</h3>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+        <div style={card}>
+          <h3 style={h3}>Por país — em stock</h3>
           <PieChart total={inStock.length} data={Object.entries(byCountryStock).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))} />
+        </div>
+        <div style={card}>
+          <h3 style={h3}>Por país — todas as referências ({wines.length})</h3>
+          <PieChart total={wines.length} data={Object.entries(byCountryAll).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))} />
         </div>
       </div>
 
-      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Por país — todas as referências ({wines.length})</h3>
-        <PieChart total={wines.length} data={Object.entries(byCountryAll).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))} />
-      </div>
-
-      <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Mais consumidos por região</h3>
-        {topRegions.length === 0
-          ? <p style={{ fontSize: 13, color: '#3a3530' }}>Sem consumos registados.</p>
-          : topRegions.map(([region, d]) => (
-            <div key={region} style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 13, color: '#e8dece', fontWeight: 400 }}>{region}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  {d.avgRating > 0 && <span style={{ fontSize: 11, color: '#c8963e' }}>{'★'.repeat(Math.round(d.avgRating))} {d.avgRating.toFixed(1)}</span>}
-                  <span style={{ fontSize: 12, color: '#9a8f82', minWidth: 60, textAlign: 'right' }}>{fmtInt(d.bottles)} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+        <div style={card}>
+          <h3 style={h3}>Mais consumidos por região</h3>
+          {topRegions.length === 0
+            ? <p style={{ fontSize: 16, color: '#9a8f82' }}>Sem consumos registados.</p>
+            : topRegions.map(([region, d]) => (
+              <div key={region} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12 }}>
+                  <span style={{ fontSize: 16, color: '#e8dece' }}>{region}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, fontSize: 15 }}>
+                    {d.avgRating > 0 && <span style={{ color: '#c8963e' }}>★ {d.avgRating.toFixed(1)}</span>}
+                    <span style={{ color: '#9a8f82' }}>{fmtInt(d.bottles)} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>
+                  </div>
                 </div>
+                {bar((d.bottles / maxRegionBottles) * 100, '#c8963e', 0.6)}
               </div>
-              <div style={{ height: 3, background: '#26221c', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${(d.bottles / maxRegionBottles) * 100}%`, background: '#c8963e', opacity: 0.5, borderRadius: 2, transition: 'width 0.4s ease' }} />
+            ))}
+        </div>
+        <div style={card}>
+          <h3 style={h3}>Top 5 por valor em adega</h3>
+          {topWines.map((w, i) => (
+            <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span style={{ fontSize: 15, color: '#9a8f82', fontWeight: 600, minWidth: 24, fontFamily: FONT }}>{i + 1}</span>
+              <WineThumb photo={w.photo} type={w.type} size={28} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>{w.name}</div>
+                <div style={{ fontSize: 14, color: '#9a8f82' }}>{w.quantity} × {fmt(w.purchasePrice)}</div>
               </div>
+              <div style={{ fontSize: 17, color: '#c8963e', fontFamily: FONT, flexShrink: 0 }}>{fmt(totalV(w))}</div>
             </div>
           ))}
-      </div>
-
-      <div style={{ ...S.stat, padding: 20 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Top 5 por valor em adega</h3>
-        {topWines.map((w, i) => (
-          <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ fontSize: 12, color: '#3a3530', fontWeight: 600, minWidth: 20, fontFamily: FONT }}>#{i + 1}</span>
-            <WineThumb photo={w.photo} type={w.type} size={20} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>{w.name}</div>
-              <div style={{ fontSize: 11, color: '#9a8f82' }}>{w.quantity} × {fmt(w.purchasePrice)}</div>
-            </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#c8963e', fontFamily: FONT }}>{fmt(totalV(w))}</div>
-              <Badge type={w.type} />
-            </div>
-          </div>
-        ))}
-      </div>
+        </div>
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Wine, Plus, BarChart3, LogIn, LogOut, Menu, Settings, FileText, UserX, KeyRound, ChevronLeft } from 'lucide-react'
+import { Wine, UserX, ChevronLeft } from 'lucide-react'
 import { supabase, loadCache, saveCache, clearCache, wineFromDb, entryFromDb, consumptionFromDb } from './lib/supabase'
 import { FONT, S, INIT_TYPES, COUNTRIES_REGIONS, SUPPLIERS } from './utils/constants'
 import { bottleLabel } from './utils/constants'
@@ -27,6 +27,7 @@ import Relatorios         from './pages/Relatorios'
 import AdminPanel         from './pages/AdminPanel'
 import Mais               from './pages/Mais'
 import MobileNav          from './components/MobileNav'
+import Sidebar            from './components/Sidebar'
 
 const WINE_DATA_SELECT = 'id,name,type,country,region,year,purchase_price,market_price,personal_rating,vivino_rating,quantity,notes,castas,alcohol_content,producer,winemaker,bottle_size,location,photo,critic_ratings'
 
@@ -72,7 +73,6 @@ export default function App() {
   const [filterRegion,     setFilterRegion]     = useState('')
   const [filterBottleSize, setFilterBottleSize] = useState('')
   const [listMode,         setListMode]         = useState('list')
-  const [sidebarOpen,      setSidebarOpen]      = useState(true)
   const [isMobile,         setIsMobile]         = useState(false)
   const [modal,            setModal]            = useState(null)
   const [activeWine,       setActiveWine]       = useState(null)
@@ -93,7 +93,7 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem('videiras_showNoStock', String(showNoStock)) } catch {} }, [showNoStock])
 
   useEffect(() => {
-    const h = () => { const mobile = window.innerWidth < 768; setIsMobile(mobile); setSidebarOpen(!mobile) }
+    const h = () => { setIsMobile(window.innerWidth < 768) }
     window.addEventListener('resize', h); h()
     return () => window.removeEventListener('resize', h)
   }, [])
@@ -203,14 +203,6 @@ export default function App() {
   const confirmDeleteWine = () => { if (liveWine && window.confirm(`Tens a certeza que queres eliminar "${liveWine.name}"? Esta acção não pode ser revertida.`)) deleteWine(liveWine.id) }
   const handleQuickAction = (id) => { if (id !== 'addWine') setActiveWine(null); setModal(id) }
 
-  const NAV = [
-    { id: 'dashboard',  icon: <BarChart3 size={15} />, label: 'Dashboard' },
-    { id: 'adega',      icon: <Wine size={15} />,      label: 'Adega' },
-    { id: 'entradas',   icon: <LogIn size={15} />,     label: 'Entradas' },
-    { id: 'consumos',   icon: <LogOut size={15} />,    label: 'Consumos' },
-    { id: 'relatorios', icon: <FileText size={15} />,  label: 'Relatórios' },
-    { id: 'definicoes', icon: <Settings size={15} />,  label: 'Definições' },
-  ]
 
   if (authLoading) return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0b09', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, fontFamily: FONT }}>
@@ -245,54 +237,24 @@ export default function App() {
         </>
       )}
 
-      {sidebarOpen && !isMobile && (
-        <div style={{ width: 216, flexShrink: 0, background: '#161310', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-          <div style={{ padding: '0 20px 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.25)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Wine size={15} color="#c8963e" /></div>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 200, color: '#e8dece', fontFamily: FONT, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Videiras</div>
-              <div style={{ fontSize: 9, color: '#4a453f', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 400, marginTop: 1 }}>cellar collection</div>
-            </div>
-          </div>
-          <nav style={{ flex: 1 }}>
-            {NAV.map(n => (
-              <button key={n.id} onClick={() => setView(n.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 20px', background: view === n.id ? 'rgba(200,150,62,0.08)' : 'none', borderLeft: view === n.id ? '2px solid #c8963e' : '2px solid transparent', color: view === n.id ? '#c8963e' : '#6a6058', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: view === n.id ? 400 : 300, fontFamily: FONT, letterSpacing: '0.02em', transition: 'all 0.15s', textAlign: 'left' }}>{n.icon}{n.label}</button>
-            ))}
-          </nav>
-          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ fontSize: 11, color: '#4a453f', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email}</div>
-            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#4a453f', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: 0, transition: 'color 0.15s' }} onMouseEnter={e => e.currentTarget.style.color = '#e87080'} onMouseLeave={e => e.currentTarget.style.color = '#4a453f'}><KeyRound size={11} /> Terminar sessão</button>
-            <button onClick={() => setShowAbout(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6a5f52', cursor: 'pointer', fontSize: 11, fontFamily: FONT, padding: '8px 0 0', transition: 'color 0.15s' }} onMouseEnter={e => e.currentTarget.style.color = '#c8963e'} onMouseLeave={e => e.currentTarget.style.color = '#6a5f52'}><Wine size={11} /> Quem é o Videiras?</button>
-          </div>
-        </div>
-      )}
+      {!isMobile && <Sidebar view={view} setView={setView} onAction={handleQuickAction} email={profile?.email} onAbout={() => setShowAbout(true)} onLogout={handleLogout} />}
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {isMobile ? (
-          <div style={{ padding: 'max(20px, env(safe-area-inset-top)) 16px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            {['relatorios', 'definicoes'].includes(view) && (
+        <div style={{ padding: isMobile ? 'max(20px, env(safe-area-inset-top)) 16px 16px' : '40px 48px 24px' }}>
+          <div style={{ maxWidth: isMobile ? undefined : 1120, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && ['relatorios', 'definicoes'].includes(view) && (
               <button onClick={() => setView('mais')} aria-label="Voltar" style={{ width: 48, height: 48, borderRadius: 24, background: '#1e1b16', border: '1px solid rgba(255,255,255,0.08)', color: '#e8dece', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><ChevronLeft size={24} /></button>
             )}
-            <h1 style={{ margin: 0, fontSize: 32, lineHeight: 1.2, fontWeight: 300, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.02em', flex: 1 }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 32 : 38, lineHeight: 1.2, fontWeight: 300, color: '#e8dece', fontFamily: FONT, letterSpacing: '-0.02em', flex: 1 }}>
               {{ dashboard: 'A tua adega', adega: 'Adega', entradas: 'Registos', consumos: 'Registos', relatorios: 'Relatórios', definicoes: 'Definições', mais: 'Mais' }[view]}
             </h1>
           </div>
-        ) : (
-        <div style={{ padding: `0 ${isMobile ? 16 : 24}px`, borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#161310', display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
-          {!isMobile && <button onClick={() => setSidebarOpen(p => !p)} style={{ background: 'none', border: 'none', color: '#6a6058', cursor: 'pointer', padding: 4, display: 'flex' }}><Menu size={17} /></button>}
-          {isMobile && <div style={{ width: 24, height: 24, background: 'rgba(200,150,62,0.12)', border: '1px solid rgba(200,150,62,0.25)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Wine size={12} color="#c8963e" /></div>}
-          <h1 style={{ margin: 0, fontSize: 12, fontWeight: 400, color: '#6a6058', fontFamily: FONT, letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
-            {{ dashboard: 'Dashboard', adega: 'Adega', entradas: 'Entradas', consumos: 'Consumos', relatorios: 'Relatórios', definicoes: 'Definições', mais: 'Mais' }[view]}
-          </h1>
-          {view === 'adega'    && <Btn variant="gold" onClick={() => setModal('addWine')}><Plus size={13} />{!isMobile && 'Vinho'}</Btn>}
-          {view === 'entradas' && <Btn variant="gold" onClick={() => { setActiveWine(null); setModal('newEntry') }}><Plus size={13} />{!isMobile && 'Nova Entrada'}</Btn>}
-          {view === 'consumos' && <Btn variant="gold" onClick={() => { setActiveWine(null); setModal('newCons')  }}><Plus size={13} />{!isMobile && 'Novo Consumo'}</Btn>}
         </div>
-        )}
 
-        <div style={{ flex: 1, padding: isMobile ? '0 16px' : 24, overflowY: 'auto', paddingBottom: isMobile ? 'calc(110px + env(safe-area-inset-bottom))' : 24 }}>
-          {isMobile && ['entradas', 'consumos'].includes(view) && (
-            <div role="tablist" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, background: '#1e1b16', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 16 }}>
+        <div style={{ flex: 1, padding: isMobile ? '0 16px' : '0 48px', paddingBottom: isMobile ? 'calc(110px + env(safe-area-inset-bottom))' : 48 }}>
+         <div style={{ maxWidth: isMobile ? undefined : 1120, margin: '0 auto' }}>
+          {['entradas', 'consumos'].includes(view) && (
+            <div role="tablist" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, background: '#1e1b16', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 16, maxWidth: 800, marginInline: 'auto' }}>
               {[['consumos', 'Consumos'], ['entradas', 'Entradas']].map(([id, label]) => (
                 <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)} style={{ height: 48, borderRadius: 12, border: 'none', fontFamily: FONT, fontSize: 16, cursor: 'pointer', fontWeight: view === id ? 600 : 500, background: view === id ? '#2e2920' : 'transparent', color: view === id ? '#e8dece' : '#9a8f82' }}>{label}</button>
               ))}
@@ -305,6 +267,7 @@ export default function App() {
           {view === 'relatorios' && <div className="vt-legible"><Relatorios wines={wines} consumptions={consumptions} entries={entries} isMobile={isMobile} /></div>}
           {view === 'definicoes' && <div className="vt-legible"><AdminPanel session={session} isAdmin={isAdmin} /></div>}
           {view === 'mais'       && <Mais email={profile?.email} setView={setView} onAbout={() => setShowAbout(true)} onLogout={handleLogout} />}
+         </div>
         </div>
       </div>
 
@@ -315,14 +278,14 @@ export default function App() {
       {modal && (
         <ModalShell onClose={closeModal} isMobile={isMobile} fullScreen={!['confirmEntry', 'confirmPrice'].includes(modal)}>
           {modal === 'addWine'     && <WineForm types={allTypes} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} allWines={wines} onExactMatch={w => { setActiveWine(w); setModal('entry') }} onSave={d => addWine(d, (createdWine) => { setActiveWine(createdWine); setModal('confirmEntry') })} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={[]} critics={critics} />}
-          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={allTypes} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={d => editWine(d, activeWine.id)} onDelete={isMobile ? confirmDeleteWine : undefined} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id && wl.quantity > 0).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} critics={critics} />}
-          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDelete={confirmDeleteWine} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={e => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={c => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} critics={critics} isMobile={isMobile} />}
+          {modal === 'editWine'    && liveWine && <WineForm wine={liveWine} types={allTypes} setTypes={setTypes} countriesRegions={countriesRegions} setCountriesRegions={setCountriesRegions} onSave={d => editWine(d, activeWine.id)} onDelete={confirmDeleteWine} onClose={closeModal} isMobile={isMobile} locations={locations} setLocations={setLocations} session={session} wineLocationRows={wineLocations.filter(wl => wl.wine_id === activeWine?.id && wl.quantity > 0).map(wl => ({ locationId: wl.location_id, quantity: wl.quantity }))} critics={critics} />}
+          {modal === 'detail'      && liveWine && <WineDetail wine={liveWine} entries={entries} consumptions={consumptions} onClose={closeModal} onEntry={() => setModal('entry')} onConsumption={() => setModal('consumption')} onEdit={() => setModal('editWine')} onDeleteEntry={deleteEntry} onDeleteConsumption={deleteConsumption} onEditEntry={e => { setActiveEntry(e); setModal('editEntry') }} onEditConsumption={c => { setActiveCons(c); setModal('editCons') }} session={session} wineLocations={wineLocations} locations={locations} critics={critics} isMobile={isMobile} />}
           {modal === 'entry'       && liveWine && <EntryForm wine={liveWine} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} noPrefill={fromNewWine} />}
           {modal === 'newEntry'    && <EntryForm wine={activeWine} allowWineSelection={true} onWineChange={w => setActiveWine(w)} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={handleAddEntry} onClose={closeModal} session={session} locations={locations} />}
           {modal === 'editEntry'   && liveWine && activeEntry && <EntryForm wine={liveWine} entry={activeEntry} suppliers={suppliers} setSuppliers={setSuppliers} entries={entries} onSave={d => editEntry(activeEntry, d)} onClose={closeModal} session={session} locations={locations} />}
-          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} isMobile={isMobile} />}
-          {modal === 'newCons'     && <ConsumptionForm wine={activeWine} allowWineSelection={true} onWineChange={w => setActiveWine(w)} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} isMobile={isMobile} />}
-          {modal === 'editCons'    && liveWine && activeCons && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={d => editConsumption(activeCons, d)} onClose={closeModal} wineLocations={wineLocations} locations={locations} isMobile={isMobile} />}
+          {modal === 'consumption' && liveWine && <ConsumptionForm wine={liveWine} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'newCons'     && <ConsumptionForm wine={activeWine} allowWineSelection={true} onWineChange={w => setActiveWine(w)} onSave={handleAddConsumption} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
+          {modal === 'editCons'    && liveWine && activeCons && <ConsumptionForm wine={liveWine} consumption={activeCons} onSave={d => editConsumption(activeCons, d)} onClose={closeModal} wineLocations={wineLocations} locations={locations} />}
           {modal === 'confirmEntry' && liveWine && (
             <ConfirmStep
               title="Vinho criado"

@@ -121,7 +121,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
   const topRegions = Object.entries(byRegion).sort((a, b) => b[1].bottles - a[1].bottles).slice(0, 8)
   const maxRegionBottles = topRegions.length ? topRegions[0][1].bottles : 1
 
-  const card = { background: '#1e1b16', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 24, padding: isMobile ? 20 : 24 }
+  const card = { background: '#1e1b16', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 24, padding: isMobile ? 20 : 24, minWidth: 0 }
   const h3 = { margin: '0 0 18px', fontSize: 18, fontWeight: 500, color: '#e8dece', fontFamily: FONT }
   const bar = (pct, color, opacity = 0.7) => (
     <div style={{ height: 8, background: '#2a251f', borderRadius: 4, overflow: 'hidden' }}>
@@ -131,7 +131,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
 
   return (
     <div style={{ paddingBottom: 40, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: isMobile ? 12 : 16 }}>
         <div style={{ ...card, gridColumn: isMobile ? '1 / -1' : 'span 2', gridRow: isMobile ? undefined : 'span 2', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: isMobile ? 24 : 28 }}>
           <div style={{ fontSize: 14, color: '#9a8f82', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>Garrafas em stock</div>
           <div style={{ fontSize: isMobile ? 64 : 88, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1.05, color: '#e8dece', fontFamily: FONT }}><CountUp from={0} to={totalBottles} duration={1.2} separator="." startWhen={totalBottles > 0} /></div>
@@ -150,7 +150,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
         <div style={card}>
           <h3 style={h3}>Gastos</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 20 }}>
@@ -187,7 +187,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
         <div style={card}>
           <h3 style={h3}>Por país — em stock</h3>
           <PieChart total={inStock.length} data={Object.entries(byCountryStock).sort((a, b) => b[1].count - a[1].count).map(([label, d]) => ({ label, value: d.count }))} />
@@ -198,7 +198,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
         <div style={card}>
           <h3 style={h3}>Mais consumidos por região</h3>
           {topRegions.length === 0
@@ -206,7 +206,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
             : topRegions.map(([region, d]) => (
               <div key={region} style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12 }}>
-                  <span style={{ fontSize: 16, color: '#e8dece' }}>{region}</span>
+                  <span style={{ fontSize: 16, color: '#e8dece', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{region}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, fontSize: 15 }}>
                     {d.avgRating > 0 && <span style={{ color: '#c8963e' }}>★ {d.avgRating.toFixed(1)}</span>}
                     <span style={{ color: '#9a8f82' }}>{fmtInt(d.bottles)} {d.bottles === 1 ? 'garrafa' : 'garrafas'}</span>

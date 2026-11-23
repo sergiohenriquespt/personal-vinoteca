@@ -125,7 +125,30 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
+      {isMobile && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+          <div style={{ ...S.stat, borderRadius: 24, padding: 24 }}>
+            <div style={{ fontSize: 14, color: '#9a8f82', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>Garrafas em stock</div>
+            <div style={{ fontSize: 64, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1.05, color: '#e8dece', fontFamily: FONT }}><CountUp from={0} to={totalBottles} duration={1.2} separator="." startWhen={totalBottles > 0} /></div>
+            <div style={{ fontSize: 16, color: '#9a8f82' }}>em <span style={{ color: '#e8dece' }}>{fmtInt(inStock.length)}</span> referências</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { l: 'Valor total',      v: fmt(totalValue),        c: '#c8963e' },
+              { l: 'Valor de mercado', v: fmt(marketValue),       c: '#c8963e' },
+              { l: 'Consumidas',       v: fmtInt(totalConsumed),  c: '#e8dece' },
+              { l: 'Gasto este mês',   v: fmt(spentThisMonth),    c: '#e8dece' },
+            ].map(({ l, v, c }) => (
+              <div key={l} style={{ ...S.stat, borderRadius: 20, padding: 18 }}>
+                <div style={{ fontSize: 14, color: '#9a8f82' }}>{l}</div>
+                <div style={{ fontSize: 24, fontWeight: 300, color: c, marginTop: 6, letterSpacing: '-0.02em', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className={isMobile ? 'vt-legible' : undefined}>
+      {!isMobile && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 28 }}>
         {[
           { l: 'Referências em stock', v: fmtInt(inStock.length),    n: inStock.length,   c: '#e8dece' },
           { l: 'Garrafas em stock',    v: fmtInt(totalBottles),       n: totalBottles,      c: '#e8dece' },
@@ -142,7 +165,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
       <div style={{ ...S.stat, padding: 20, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 16px', fontSize: 10, color: '#9a8f82', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Resumo de gastos</h3>
@@ -229,6 +252,7 @@ export default function Dashboard({ wines, entries, consumptions, isMobile }) {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   )

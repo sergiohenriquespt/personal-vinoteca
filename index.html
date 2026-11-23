@@ -2,7 +2,7 @@
 <html lang="pt">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover" />
     <title>Videiras - Cellar Collection</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.svg" />
@@ -21,6 +21,27 @@
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+      /* ponytail: mobile sizing via !important over inline styles — avoids threading isMobile through every form field */
+      @media (max-width: 767px) {
+        body { -webkit-tap-highlight-color: transparent; }
+        .vt-m input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), .vt-m select { min-height: 52px; font-size: 17px !important; border-radius: 14px !important; }
+        .vt-m textarea { font-size: 17px !important; border-radius: 14px !important; }
+        .vt-m label { font-size: 13px !important; }
+        .vt-m select ~ button { min-width: 52px; align-self: stretch; justify-content: center; border-radius: 14px !important; }
+        .vt-m .vt-btn { min-height: 54px; font-size: 17px !important; font-weight: 500 !important; padding: 0 20px !important; border-radius: 16px !important; justify-content: center; }
+        .vt-m .vt-actions { position: sticky; bottom: 0; z-index: 5; margin: 20px -16px 0 !important; padding: 12px 16px max(16px, env(safe-area-inset-bottom)); background: #1e1b16; border-top: 1px solid rgba(255,255,255,0.08); }
+        .vt-m .vt-actions .vt-btn { flex: 1; }
+        .vt-m .vt-actions + .vt-endpad { display: none; }
+        .vt-m .vt-msub { font-size: 15px !important; }
+        .vt-m .vt-close { width: 48px; height: 48px; border-radius: 24px !important; background: #2a261f !important; display: flex; align-items: center; justify-content: center; color: #e8dece !important; }
+        .vt-m .vt-mtitle { font-size: 24px !important; font-weight: 400 !important; }
+        .vt-m .vt-ac-item { padding: 12px 14px !important; min-height: 64px; }
+        .vt-m .vt-ac-name { font-size: 16px !important; }
+        .vt-m .vt-ac-meta { font-size: 14px !important; }
+        .vt-m .vt-ac-btn { min-height: 44px; padding: 0 12px !important; font-size: 13px !important; border-radius: 12px !important; color: #e8dece !important; }
+        .vt-legible { zoom: 1.15; }
+        .vt-legible input, .vt-legible select, .vt-legible textarea { font-size: 16px !important; }
+      }
     </style>
   </head>
   <body>

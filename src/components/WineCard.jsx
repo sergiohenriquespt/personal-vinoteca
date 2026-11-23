@@ -187,3 +187,35 @@ export function WineGridView({ wines, onWineClick, wineLocations = [], locations
     </div>
   )
 }
+
+// Lista mobile: um cartão grande por vinho (ordem por nome vem já do Supabase)
+export function WineMobileList({ wines, onWineClick, wineLocations = [], locations = [] }) {
+  if (wines.length === 0) return <div style={{ textAlign: 'center', padding: '64px 0', color: '#9a8f82' }}><Wine size={40} style={{ marginBottom: 12, opacity: 0.3 }} /><p style={{ fontSize: 16 }}>Nenhum vinho encontrado.</p></div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {wines.map(w => {
+        const c = getTC(w.type)
+        const locData = getWineLocationData(w.id, wineLocations, locations)
+        const loc = locData.length === 0 ? null : locData.length === 1 ? locData[0].name : `${locData.length} locais`
+        return (
+          <button key={w.id} onClick={() => onWineClick(w)}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px 12px 12px', borderRadius: 20, background: '#1e1b16', border: '1px solid rgba(255,255,255,0.06)', color: '#e8dece', fontFamily: FONT, textAlign: 'left', cursor: 'pointer', width: '100%', opacity: w.quantity === 0 ? 0.5 : 1 }}>
+            {w.photo
+              ? <img src={w.photo} alt="" loading="lazy" style={{ width: 56, height: 76, objectFit: 'cover', borderRadius: 12, flexShrink: 0 }} />
+              : <span style={{ width: 56, height: 76, borderRadius: 12, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Wine size={26} color={c.fg} style={{ opacity: 0.7 }} /></span>}
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 17, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</span>
+              <span style={{ fontSize: 15, color: '#9a8f82', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[w.region || w.country, w.year].filter(Boolean).join(' · ')}</span>
+              {loc && <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#c8963e' }}><MapPin size={13} />{loc}</span>}
+            </span>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+              <span style={{ fontSize: 26, lineHeight: 1, color: w.quantity > 0 ? '#68c880' : '#e87080' }}>{w.quantity}</span>
+              <span style={{ fontSize: 12, color: '#9a8f82' }}>{w.quantity === 1 ? 'garrafa' : 'garrafas'}</span>
+              <span style={{ fontSize: 15, color: '#c8963e', marginTop: 2 }}>{fmt(w.purchasePrice)}</span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}

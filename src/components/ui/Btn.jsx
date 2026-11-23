@@ -16,7 +16,7 @@ export default function Btn({ children, onClick, variant = 'default', style = {}
     danger:  { background: 'rgba(192,48,74,0.15)', color: '#e87080' },
   }
   return (
-    <button onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>
+    <button className="vt-btn" onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>
       {children}
     </button>
   )

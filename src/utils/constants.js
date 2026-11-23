@@ -64,3 +64,11 @@ export const S = {
 }
 
 export const PIE_PALETTE = ['#c8963e','#78b0d8','#68c880','#e87080','#c078cc','#e88050','#d4a838','#9a8f82','#e878a8','#68a8d8']
+
+// Chip grande para mobile (filtros por tipo, escolha de tipo no formulário)
+export const chipStyle = (on) => ({
+  flexShrink: 0, height: 44, padding: '0 16px', borderRadius: 22, fontFamily: FONT, fontSize: 15, fontWeight: 500,
+  display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+  ...(on ? { background: '#c8963e', color: '#0d0b09', border: '1px solid #c8963e' }
+         : { background: '#1e1b16', color: '#e8dece', border: '1px solid rgba(255,255,255,0.10)' }),
+})

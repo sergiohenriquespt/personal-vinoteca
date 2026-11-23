@@ -38,7 +38,7 @@ export default function WineNameAutocomplete({ value, onChange, allWines, onExac
             Vinhos existentes — clica para dar entrada
           </div>
           {suggestions.map(w => (
-            <div key={w.id}
+            <div key={w.id} className="vt-ac-item"
               onMouseDown={e => { e.preventDefault(); setOpen(false); onExactMatch(w) }}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
                 cursor: 'pointer', transition: 'background 0.1s', borderTop: '1px solid rgba(255,255,255,0.04)' }}
@@ -47,8 +47,8 @@ export default function WineNameAutocomplete({ value, onChange, allWines, onExac
             >
               <WineThumb photo={w.photo} type={w.type} size={18} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
-                <div style={{ fontSize: 11, color: '#9a8f82' }}>{w.year} · {w.region}</div>
+                <div className="vt-ac-name" style={{ fontSize: 13, color: '#e8dece', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
+                <div className="vt-ac-meta" style={{ fontSize: 11, color: '#9a8f82' }}>{w.year} · {w.region}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <div style={{ textAlign: 'right' }}>
@@ -57,7 +57,7 @@ export default function WineNameAutocomplete({ value, onChange, allWines, onExac
                     {w.quantity > 0 ? `${w.quantity} em stock` : 'sem stock'}
                   </div>
                 </div>
-                <button
+                <button className="vt-ac-btn"
                   onMouseDown={e => { e.stopPropagation(); e.preventDefault(); setOpen(false); onPartialMatch(w) }}
                   title="Criar novo vintage com este nome"
                   style={{ padding: '4px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)',

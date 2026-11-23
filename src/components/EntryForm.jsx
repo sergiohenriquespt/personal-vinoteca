@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { LogIn } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { FONT, S, SUPPLIERS } from '../utils/constants'
-import { fmtNum } from '../utils/format'
+import { fmtNum, localISODate } from '../utils/format'
 import Btn from './ui/Btn'
 import FilterSelect from './ui/FilterSelect'
 import { ModalHeader } from './ui/ModalShell'
@@ -15,7 +15,7 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
 
   const [f, setF] = useState(entry
     ? { date: entry.date, quantity: entry.quantity, supplier: entry.supplier || '', price: fmtNum(entry.price), locationId: '' }
-    : { date: new Date().toISOString().slice(0, 10), quantity: 1, supplier: noPrefill ? '' : (suppliers?.[0] ?? SUPPLIERS[0]), price: (noPrefill || allowWineSelection) ? '' : fmtNum(wine?.purchasePrice), locationId: '' })
+    : { date: localISODate(), quantity: 1, supplier: noPrefill ? '' : (suppliers?.[0] ?? SUPPLIERS[0]), price: (noPrefill || allowWineSelection) ? '' : fmtNum(wine?.purchasePrice), locationId: '' })
   const set = (k, v) => setF(p => ({ ...p, [k]: v }))
   const list = suppliers ?? SUPPLIERS
 
@@ -81,7 +81,7 @@ export default function EntryForm({ wine, entry, suppliers, setSuppliers, entrie
           </select>
         </div>
       )}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div className="vt-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
         <Btn variant="gold" disabled={allowWineSelection && !selectedWine} onClick={() => {
           if (!effectiveWine) return
